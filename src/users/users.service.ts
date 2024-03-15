@@ -14,12 +14,14 @@ import { JwtService } from '@nestjs/jwt';
 import { Folder } from 'src/folders/entities/folder.entity';
 import { Group } from 'src/groups/entities/group.entity';
 import * as bcrypt from 'bcrypt';
-import { DataSource } from "typeorm"
+import { DataSource } from 'typeorm';
 import { verificationTemplate } from 'src/utils/email.templates';
 import { decodeJwtResponse } from 'src/utils/jwt.utils';
 import { Invite } from 'src/invites/entities/invite.entity';
 import { Organization } from 'src/organizations/entities/organization.entity';
-import { last } from 'rxjs';
+import { getMetadataArgsStorage } from 'typeorm';
+import { File } from 'src/files/entities/file.entity';
+import { formatBytes } from 'src/utils/converts.utils';
 // import { sendSMS } from 'src/utils/otp.utils';
 
 @Injectable()
@@ -36,6 +38,8 @@ export class UsersService {
     private readonly orgRepository: Repository<Organization>,
     @InjectRepository(Invite)
     private readonly inviteRepository: Repository<Invite>,
+    @InjectRepository(File)
+    private readonly fileRepository: Repository<File>,
   ) {}
 
   async create(createUserDto: CreateUserDto) {
@@ -49,11 +53,14 @@ export class UsersService {
       if (existingUser) throw new ConflictException('user already exists');
 
       const find_invites = await this.inviteRepository.find({
-        where : {
-          sent_to: createUserDto.email
-        }
-      })
-      if(find_invites.length>0) throw new ConflictException(`You've already been invited, Check your email!`);
+        where: {
+          sent_to: createUserDto.email,
+        },
+      });
+      if (find_invites.length > 0)
+        throw new ConflictException(
+          `You've already been invited, Check your email!`,
+        );
 
       const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
       createUserDto.password = hashedPassword;
@@ -134,10 +141,8 @@ export class UsersService {
       return {
         user: { ...user, organization_created: saveOrg },
         access_token,
-        folders: [folder],
         files_count: 1,
         id: user.id,
-        sub_folder_count: query1,
         organizations: [saveOrg],
       };
     } catch (error) {
@@ -160,7 +165,6 @@ export class UsersService {
       });
 
       const orgs = [];
-      
 
       if (!user) {
         // console.log(user);
@@ -174,59 +178,71 @@ export class UsersService {
       //     message: "verify your email",
       //   }); // Throw ConflictException
       const passwordMatched = await bcrypt.compare(password, user.password);
-      // console.log(passwordMatched, 'match');
       if (!passwordMatched) {
         throw new UnauthorizedException('Invalid Credentials'); // Throw UnauthorizedException
       }
-      const query = await this.folderRepository
-        .createQueryBuilder('folder')
-        .leftJoinAndSelect('folder.users', 'user')
-        .where('user.id = :userId', { userId: user.id })
-        .getMany();
+      if (user.role == 'admin') {
+        const payload = {
+          user_id: user.id,
+          email: user.email,
+          role: user.role,
+        };
+        const accessToken = this.jwtService.sign(payload, {
+          secret: process.env.JWT_SECRET,
+          expiresIn: '1d',
+        });
+        if (user.organization_created) {
+          orgs.push(user.organization_created.id);
+        }
+        user.organizations_added_in.map((org) => {
+          orgs.push(org.id);
+        });
 
-      const query1 = await this.folderRepository
-        .createQueryBuilder('folder')
-        .leftJoinAndSelect('folder.users', 'user')
-        .leftJoin('folder.sub_folders', 'sub_folder')
-        .addSelect('COUNT(DISTINCT sub_folder.id)', 'sub_folder_count')
-        .where('user.id = :userId', { userId: user.id })
-        .groupBy('folder.id, user.id')
-        .orderBy('folder.createdAt', 'ASC')
-        .getRawMany();
-      const payload = {
-        user_id: user.id,
-        email: user.email,
-        role: user.role,
-      };
-      const accessToken = this.jwtService.sign(payload, {
-        secret: process.env.JWT_SECRET,
-        expiresIn: '1d',
-      });
-      // console.log(user,'useree')
-      if (user.organization_created) {
-        orgs.push(user.organization_created.id);
+        const organizations = await this.orgRepository.find({
+          relations: ['users', 'creator'],
+          where: {
+            id: In(orgs),
+          },
+        });
+
+        return {
+          access_token: accessToken,
+          is_phone_number_verified: user.phone_number ? true : false,
+          id: user.id,
+          user,
+          organizations,
+        };
       }
-      user.organizations_added_in.map((org) => {
-        orgs.push(org.id);
-      });
+      if (user.role == 'guest') {
+        const payload = {
+          user_id: user.id,
+          email: user.email,
+          role: user.role,
+        };
+        const accessToken = this.jwtService.sign(payload, {
+          secret: process.env.JWT_SECRET,
+          expiresIn: '1d',
+        });
+        user.organizations_added_in.map((org) => {
+          orgs.push(org.id);
+        });
+        console.log(orgs,'useree')
 
-      const organizations = await this.orgRepository.find({
-        relations: ['users', 'creator'],
-        where: {
-          id: In(orgs),
-        },
-      });
+        const organizations = await this.orgRepository.find({
+          relations: ['users', 'creator'],
+          where: {
+            id: In(orgs),
+          },
+        });
 
-      return {
-        access_token:accessToken,
-        is_phone_number_verified: user.phone_number ? true : false,
-        folders: query,
-        files_count: query.length,
-        sub_folder_count: query1,
-        id: user.id,
-        user,
-        organizations,
-      };
+        return {
+          access_token: accessToken,
+          is_phone_number_verified: user.phone_number ? true : false,
+          id: user.id,
+          user,
+          organizations,
+        };
+      }
     } catch (error) {
       console.log(error);
       throw error;
@@ -238,8 +254,6 @@ export class UsersService {
       const user = decodeJwtResponse(jwt_token);
 
       if (!user) throw new UnauthorizedException('token invalid');
-
-     
 
       const findUser = await this.userRepository.findOne({
         relations: ['organizations_added_in', 'organization_created'],
@@ -298,11 +312,14 @@ export class UsersService {
       }
       // console.log('1')
       const find_invites = await this.inviteRepository.find({
-        where : {
-          sent_to: user?.email
-        }
-      })
-      if(find_invites.length>0) throw new ConflictException(`You've already been invited, Check your email!`);
+        where: {
+          sent_to: user?.email,
+        },
+      });
+      if (find_invites.length > 0)
+        throw new ConflictException(
+          `You've already been invited, Check your email!`,
+        );
 
       const new_user = this.userRepository.create({
         email: user.email,
@@ -405,32 +422,23 @@ export class UsersService {
       });
       // console.log(resp, 'reesps');
       if (resp) {
-        const findUser = await this.userRepository.findOne({
+        const find_user = await this.userRepository.findOne({
           relations: ['organizations_added_in', 'organization_created'],
           where: {
             id: resp.user_id,
           },
         });
 
-        if (!findUser) {
+        if (!find_user) {
           throw new NotFoundException('user not found');
         }
         const orgs = [];
-        orgs.push(findUser.organization_created);
-        findUser.organizations_added_in.map((org) => {
+        if(find_user.role=='admin') orgs.push(find_user.organization_created);
+        find_user.organizations_added_in.map((org) => {
           orgs.push(org);
         });
-        const query1 = await this.folderRepository
-          .createQueryBuilder('folder')
-          .leftJoinAndSelect('folder.users', 'user')
-          .leftJoin('folder.sub_folders', 'sub_folder')
-          .addSelect('COUNT(DISTINCT sub_folder.id)', 'sub_folder_count')
-          .where('user.id = :userId', { userId: findUser.id })
-          .groupBy('folder.id, user.id')
-          .orderBy('folder.createdAt', 'ASC')
-          .getRawMany();
 
-        return { findUser, sub_folder_count: query1, organizations: orgs };
+        return { findUser:find_user, organizations: orgs };
       }
       throw new UnauthorizedException('jwt token expired');
     } catch (error) {
@@ -449,7 +457,7 @@ export class UsersService {
 
   async findOne(where: any) {
     return await this.userRepository.findOne({
-      relations: ['organization_created', 'organizations_added_in'],
+      relations: ['organization_created', 'organizations_added_in', 'groups'],
       where: where,
     });
   }
@@ -488,13 +496,39 @@ export class UsersService {
 
   async clearDB() {
     try {
-    
-      const remove = await this.userRepository.clear()
-      console.log(remove, 'in rmeoooood')
-      return remove
+      const remove = await this.userRepository.clear();
+      console.log(remove, 'in rmeoooood');
+      return remove;
     } catch (error) {
-      console.log(error)
+      console.log(error);
     }
+  }
+
+  async removeAllRecords() {
+    console.log('here');
+    const entityManager = new DataSource({
+      type: 'postgres',
+      host: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT, 10),
+      username: process.env.DB_USERNAME,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_DATABASE,
+    }).manager;
+    const entityMetadatas = getMetadataArgsStorage().tables.map(
+      (table) => table.target,
+    );
+    console.log('meta', entityMetadatas);
+    await entityManager.query('SET FOREIGN_KEY_CHECKS = 0');
+    for (const entityMetadata of entityMetadatas) {
+      try {
+        // Clear the table using the entity manager
+        await entityManager.clear(entityMetadata);
+        console.log(`Table ${entityMetadata} cleared successfully.`);
+      } catch (error) {
+        console.error(`Error clearing table ${entityMetadata}:`, error);
+      }
+    }
+    await entityManager.query('SET FOREIGN_KEY_CHECKS = 1');
   }
 
   async truncateUserTable() {
@@ -505,13 +539,14 @@ export class UsersService {
       username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_DATABASE,
-    }).manager;
-  
+    }).initialize();
+
     try {
       // Use createNativeQuery to execute a raw SQL query
-      debugger
-      await entityManager.query('TRUNCATE TABLE "user" CASCADE');
-  
+      await (
+        await entityManager
+      ).manager.query('TRUNCATE TABLE "user" CASCADE');
+
       console.log('User table truncated successfully.');
     } catch (error) {
       console.error('Error truncating user table:', error);
