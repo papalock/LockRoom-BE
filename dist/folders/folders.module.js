@@ -18,17 +18,27 @@ const group_files_permissions_entity_1 = require("../group-files-permissions/ent
 const files_permissions_entity_1 = require("../files-permissions/entities/files-permissions.entity");
 const file_entity_1 = require("../files/entities/file.entity");
 const organization_entity_1 = require("../organizations/entities/organization.entity");
+const group_entity_1 = require("../groups/entities/group.entity");
 let FoldersModule = class FoldersModule {
 };
 exports.FoldersModule = FoldersModule;
 exports.FoldersModule = FoldersModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            typeorm_1.TypeOrmModule.forFeature([folder_entity_1.Folder, user_entity_1.User, group_files_permissions_entity_1.GroupFilesPermissions, files_permissions_entity_1.FilesPermissions, file_entity_1.File, organization_entity_1.Organization]), users_module_1.UsersModule
+            typeorm_1.TypeOrmModule.forFeature([
+                folder_entity_1.Folder,
+                user_entity_1.User,
+                group_files_permissions_entity_1.GroupFilesPermissions,
+                files_permissions_entity_1.FilesPermissions,
+                file_entity_1.File,
+                organization_entity_1.Organization,
+                group_entity_1.Group,
+            ]),
+            users_module_1.UsersModule,
         ],
         controllers: [folders_controller_1.FoldersController],
         providers: [folders_service_1.FoldersService],
-        exports: [folders_service_1.FoldersService]
+        exports: [folders_service_1.FoldersService],
     })
 ], FoldersModule);
 //# sourceMappingURL=folders.module.js.map

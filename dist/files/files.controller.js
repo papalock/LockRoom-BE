@@ -24,11 +24,11 @@ let FilesController = class FilesController {
     create(createFileDto) {
         return this.filesService.create(createFileDto);
     }
-    findAll(organization_id) {
-        return this.filesService.getAllFilesByOrganization(organization_id);
+    findAll(organization_id, parent_folder_id) {
+        return this.filesService.getAllFilesByOrg(organization_id, parent_folder_id);
     }
     findOne(id) {
-        return this.filesService.findOne(+id);
+        return this.filesService.findOne(id);
     }
     update(id, updateFileDto) {
         return this.filesService.update(+id, updateFileDto);
@@ -48,8 +48,9 @@ __decorate([
 __decorate([
     (0, common_1.Post)('organization/all'),
     __param(0, (0, common_1.Body)('organization_id')),
+    __param(1, (0, common_1.Body)('parent_folder_id')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", void 0)
 ], FilesController.prototype, "findAll", null);
 __decorate([

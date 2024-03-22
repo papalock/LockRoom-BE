@@ -50,7 +50,7 @@ __decorate([
     __metadata("design:type", Array)
 ], Folder.prototype, "sub_folders", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => file_entity_1.File, file => file.folder),
+    (0, typeorm_1.OneToMany)(() => file_entity_1.File, (file) => file.folder, { onDelete: 'CASCADE' }),
     __metadata("design:type", Array)
 ], Folder.prototype, "files", void 0);
 __decorate([

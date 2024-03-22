@@ -17,6 +17,7 @@ const invite_entity_1 = require("../../invites/entities/invite.entity");
 const group_entity_1 = require("../..//groups/entities/group.entity");
 const file_entity_1 = require("../../files/entities/file.entity");
 const organization_entity_1 = require("../../organizations/entities/organization.entity");
+const audit_logs_entities_1 = require("../../audit-logs/entities/audit-logs.entities");
 let User = class User {
     addId() {
         this.id = (0, uuid_1.v4)();
@@ -115,6 +116,10 @@ __decorate([
     (0, typeorm_1.OneToMany)(() => file_entity_1.File, (file) => file.user),
     __metadata("design:type", Array)
 ], User.prototype, "files", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => audit_logs_entities_1.AuditLogs, auditLog => auditLog.user),
+    __metadata("design:type", Array)
+], User.prototype, "audit_log", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' }),
     __metadata("design:type", Date)

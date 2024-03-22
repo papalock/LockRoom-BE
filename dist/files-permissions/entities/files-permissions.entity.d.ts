@@ -6,5 +6,7 @@ export declare class FilesPermissions {
     file: File;
     permission: Permission;
     group_files_permissions: GroupFilesPermissions[];
+    createdAt: Date;
+    updatedAt: Date;
     addId(): void;
 }

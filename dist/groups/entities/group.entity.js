@@ -16,6 +16,7 @@ const user_entity_1 = require("../../users/entities/user.entity");
 const invite_entity_1 = require("../../invites/entities/invite.entity");
 const organization_entity_1 = require("../../organizations/entities/organization.entity");
 const group_files_permissions_entity_1 = require("../../group-files-permissions/entities/group-files-permissions.entity");
+const audit_logs_entities_1 = require("../../audit-logs/entities/audit-logs.entities");
 let Group = class Group {
     addId() {
         this.id = (0, uuid_1.v4)();
@@ -43,13 +44,19 @@ __decorate([
     __metadata("design:type", Array)
 ], Group.prototype, "invites", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => organization_entity_1.Organization, (organization) => organization.groups, { onDelete: 'CASCADE' }),
+    (0, typeorm_1.ManyToOne)(() => organization_entity_1.Organization, (organization) => organization.groups, {
+        onDelete: 'CASCADE',
+    }),
     __metadata("design:type", organization_entity_1.Organization)
 ], Group.prototype, "organization", void 0);
 __decorate([
     (0, typeorm_1.OneToMany)(() => group_files_permissions_entity_1.GroupFilesPermissions, (groupFilesPermissions) => groupFilesPermissions.group),
     __metadata("design:type", Array)
 ], Group.prototype, "group_files_permissions", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => audit_logs_entities_1.AuditLogs, (auditLog) => auditLog.organization),
+    __metadata("design:type", Array)
+], Group.prototype, "audit_log", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' }),
     __metadata("design:type", Date)

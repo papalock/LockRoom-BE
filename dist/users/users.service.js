@@ -26,10 +26,13 @@ const email_templates_1 = require("../utils/email.templates");
 const jwt_utils_1 = require("../utils/jwt.utils");
 const invite_entity_1 = require("../invites/entities/invite.entity");
 const organization_entity_1 = require("../organizations/entities/organization.entity");
+const typeorm_4 = require("typeorm");
+const audit_logs_service_1 = require("../audit-logs/audit-logs.service");
 let UsersService = class UsersService {
-    constructor(userRepository, jwtService, folderRepository, groupsRepository, orgRepository, inviteRepository) {
+    constructor(userRepository, jwtService, auditService, folderRepository, groupsRepository, orgRepository, inviteRepository) {
         this.userRepository = userRepository;
         this.jwtService = jwtService;
+        this.auditService = auditService;
         this.folderRepository = folderRepository;
         this.groupsRepository = groupsRepository;
         this.orgRepository = orgRepository;
@@ -44,8 +47,8 @@ let UsersService = class UsersService {
                 throw new common_1.ConflictException('user already exists');
             const find_invites = await this.inviteRepository.find({
                 where: {
-                    sent_to: createUserDto.email
-                }
+                    sent_to: createUserDto.email,
+                },
             });
             if (find_invites.length > 0)
                 throw new common_1.ConflictException(`You've already been invited, Check your email!`);
@@ -80,28 +83,14 @@ let UsersService = class UsersService {
                 users: [],
                 invites: [],
             });
-            console.log('here1', new_org);
             const saveOrg = await this.orgRepository.save(new_org);
-            console.log('here2', saveOrg);
-            const folder = await this.folderRepository.save({
+            await this.folderRepository.save({
                 name: 'Home',
                 parent_folder_id: null,
                 tree_index: '1',
                 users: [user],
                 organization: saveOrg,
             });
-            const query1 = await this.folderRepository
-                .createQueryBuilder('folder')
-                .leftJoinAndSelect('folder.users', 'user')
-                .leftJoin('folder.sub_folders', 'sub_folder')
-                .addSelect('COUNT(DISTINCT sub_folder.id)', 'sub_folder_count')
-                .where('user.id = :userId', { userId: user.id })
-                .andWhere('folder.organization.id = :organizationId', {
-                organizationId: saveOrg.id,
-            })
-                .groupBy('folder.id, user.id')
-                .orderBy('folder.createdAt', 'ASC')
-                .getRawMany();
             const mail = {
                 to: user.email,
                 subject: 'Verify Email',
@@ -112,10 +101,8 @@ let UsersService = class UsersService {
             return {
                 user: { ...user, organization_created: saveOrg },
                 access_token,
-                folders: [folder],
                 files_count: 1,
                 id: user.id,
-                sub_folder_count: query1,
                 organizations: [saveOrg],
             };
         }
@@ -143,51 +130,66 @@ let UsersService = class UsersService {
             if (!passwordMatched) {
                 throw new common_1.UnauthorizedException('Invalid Credentials');
             }
-            const query = await this.folderRepository
-                .createQueryBuilder('folder')
-                .leftJoinAndSelect('folder.users', 'user')
-                .where('user.id = :userId', { userId: user.id })
-                .getMany();
-            const query1 = await this.folderRepository
-                .createQueryBuilder('folder')
-                .leftJoinAndSelect('folder.users', 'user')
-                .leftJoin('folder.sub_folders', 'sub_folder')
-                .addSelect('COUNT(DISTINCT sub_folder.id)', 'sub_folder_count')
-                .where('user.id = :userId', { userId: user.id })
-                .groupBy('folder.id, user.id')
-                .orderBy('folder.createdAt', 'ASC')
-                .getRawMany();
-            const payload = {
-                user_id: user.id,
-                email: user.email,
-                role: user.role,
-            };
-            const accessToken = this.jwtService.sign(payload, {
-                secret: process.env.JWT_SECRET,
-                expiresIn: '1d',
-            });
-            if (user.organization_created) {
-                orgs.push(user.organization_created.id);
+            if (user.role == 'admin') {
+                const payload = {
+                    user_id: user.id,
+                    email: user.email,
+                    role: user.role,
+                };
+                const accessToken = this.jwtService.sign(payload, {
+                    secret: process.env.JWT_SECRET,
+                    expiresIn: '1d',
+                });
+                if (user.organization_created) {
+                    orgs.push(user.organization_created.id);
+                }
+                user.organizations_added_in.map((org) => {
+                    orgs.push(org.id);
+                });
+                const organizations = await this.orgRepository.find({
+                    relations: ['users', 'creator'],
+                    where: {
+                        id: (0, typeorm_2.In)(orgs),
+                    },
+                });
+                return {
+                    access_token: accessToken,
+                    is_phone_number_verified: user.phone_number ? true : false,
+                    id: user.id,
+                    user,
+                    organizations,
+                };
             }
-            user.organizations_added_in.map((org) => {
-                orgs.push(org.id);
-            });
-            const organizations = await this.orgRepository.find({
-                relations: ['users', 'creator'],
-                where: {
-                    id: (0, typeorm_2.In)(orgs),
-                },
-            });
-            return {
-                access_token: accessToken,
-                is_phone_number_verified: user.phone_number ? true : false,
-                folders: query,
-                files_count: query.length,
-                sub_folder_count: query1,
-                id: user.id,
-                user,
-                organizations,
-            };
+            if (user.role == 'guest') {
+                const payload = {
+                    user_id: user.id,
+                    email: user.email,
+                    role: user.role,
+                };
+                const accessToken = this.jwtService.sign(payload, {
+                    secret: process.env.JWT_SECRET,
+                    expiresIn: '1d',
+                });
+                user.organizations_added_in.map((org) => {
+                    orgs.push(org.id);
+                });
+                console.log(orgs, 'useree');
+                const organizations = await this.orgRepository.find({
+                    relations: ['users', 'creator'],
+                    where: {
+                        id: (0, typeorm_2.In)(orgs),
+                    },
+                });
+                const new_audit = await this.auditService.create(null, user.id, user.organizations_added_in[0].id, 'login');
+                console.log(new_audit);
+                return {
+                    access_token: accessToken,
+                    is_phone_number_verified: user.phone_number ? true : false,
+                    id: user.id,
+                    user,
+                    organizations,
+                };
+            }
         }
         catch (error) {
             console.log(error);
@@ -253,8 +255,8 @@ let UsersService = class UsersService {
             }
             const find_invites = await this.inviteRepository.find({
                 where: {
-                    sent_to: user?.email
-                }
+                    sent_to: user?.email,
+                },
             });
             if (find_invites.length > 0)
                 throw new common_1.ConflictException(`You've already been invited, Check your email!`);
@@ -342,30 +344,22 @@ let UsersService = class UsersService {
                 secret: process.env.JWT_SECRET,
             });
             if (resp) {
-                const findUser = await this.userRepository.findOne({
+                const find_user = await this.userRepository.findOne({
                     relations: ['organizations_added_in', 'organization_created'],
                     where: {
                         id: resp.user_id,
                     },
                 });
-                if (!findUser) {
+                if (!find_user) {
                     throw new common_1.NotFoundException('user not found');
                 }
                 const orgs = [];
-                orgs.push(findUser.organization_created);
-                findUser.organizations_added_in.map((org) => {
+                if (find_user.role == 'admin')
+                    orgs.push(find_user.organization_created);
+                find_user.organizations_added_in.map((org) => {
                     orgs.push(org);
                 });
-                const query1 = await this.folderRepository
-                    .createQueryBuilder('folder')
-                    .leftJoinAndSelect('folder.users', 'user')
-                    .leftJoin('folder.sub_folders', 'sub_folder')
-                    .addSelect('COUNT(DISTINCT sub_folder.id)', 'sub_folder_count')
-                    .where('user.id = :userId', { userId: findUser.id })
-                    .groupBy('folder.id, user.id')
-                    .orderBy('folder.createdAt', 'ASC')
-                    .getRawMany();
-                return { findUser, sub_folder_count: query1, organizations: orgs };
+                return { findUser: find_user, organizations: orgs };
             }
             throw new common_1.UnauthorizedException('jwt token expired');
         }
@@ -384,7 +378,7 @@ let UsersService = class UsersService {
     }
     async findOne(where) {
         return await this.userRepository.findOne({
-            relations: ['organization_created', 'organizations_added_in'],
+            relations: ['organization_created', 'organizations_added_in', 'groups'],
             where: where,
         });
     }
@@ -428,7 +422,8 @@ let UsersService = class UsersService {
             console.log(error);
         }
     }
-    async truncateUserTable() {
+    async removeAllRecords() {
+        console.log('here');
         const entityManager = new typeorm_3.DataSource({
             type: 'postgres',
             host: process.env.DB_HOST,
@@ -437,9 +432,31 @@ let UsersService = class UsersService {
             password: process.env.DB_PASSWORD,
             database: process.env.DB_DATABASE,
         }).manager;
+        const entityMetadatas = (0, typeorm_4.getMetadataArgsStorage)().tables.map((table) => table.target);
+        console.log('meta', entityMetadatas);
+        await entityManager.query('SET FOREIGN_KEY_CHECKS = 0');
+        for (const entityMetadata of entityMetadatas) {
+            try {
+                await entityManager.clear(entityMetadata);
+                console.log(`Table ${entityMetadata} cleared successfully.`);
+            }
+            catch (error) {
+                console.error(`Error clearing table ${entityMetadata}:`, error);
+            }
+        }
+        await entityManager.query('SET FOREIGN_KEY_CHECKS = 1');
+    }
+    async truncateUserTable() {
+        const entityManager = new typeorm_3.DataSource({
+            type: 'postgres',
+            host: process.env.DB_HOST,
+            port: parseInt(process.env.DB_PORT, 10),
+            username: process.env.DB_USERNAME,
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_DATABASE,
+        }).initialize();
         try {
-            debugger;
-            await entityManager.query('TRUNCATE TABLE "user" CASCADE');
+            await (await entityManager).manager.query('TRUNCATE TABLE "user" CASCADE');
             console.log('User table truncated successfully.');
         }
         catch (error) {
@@ -451,12 +468,13 @@ exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
-    __param(2, (0, typeorm_1.InjectRepository)(folder_entity_1.Folder)),
-    __param(3, (0, typeorm_1.InjectRepository)(group_entity_1.Group)),
-    __param(4, (0, typeorm_1.InjectRepository)(organization_entity_1.Organization)),
-    __param(5, (0, typeorm_1.InjectRepository)(invite_entity_1.Invite)),
+    __param(3, (0, typeorm_1.InjectRepository)(folder_entity_1.Folder)),
+    __param(4, (0, typeorm_1.InjectRepository)(group_entity_1.Group)),
+    __param(5, (0, typeorm_1.InjectRepository)(organization_entity_1.Organization)),
+    __param(6, (0, typeorm_1.InjectRepository)(invite_entity_1.Invite)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         jwt_1.JwtService,
+        audit_logs_service_1.AuditLogsSerivce,
         typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,

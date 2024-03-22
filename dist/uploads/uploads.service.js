@@ -24,23 +24,38 @@ let UploadService = class UploadService {
         });
     }
     async uploadMultiple(files, folder_id, user_id, organization_id) {
+        console.log(files[0]);
+        console.log(folder_id, user_id, organization_id);
         if (files.length > 0) {
-            console.log(files[0]);
+            const file_names = [];
             const file_promises = files.map((file) => {
+                let file_name = (0, uuid_1.v4)() + '-' + file.originalname;
+                file_names.push(file_name);
                 return this.s3Client.send(new client_s3_1.PutObjectCommand({
                     Bucket: 'lockroom',
-                    Key: file.originalname + (0, uuid_1.v4)(),
+                    Key: file_name,
                     Body: file.buffer,
                 }));
             });
             const response = await Promise.all(file_promises);
-            if (response) {
-                files.map(async (file) => {
-                    return await this.fileService.addFileToAFolder(file.originalname + (0, uuid_1.v4)(), folder_id, user_id, organization_id, file.mimetype);
-                });
+            if (true) {
+                for (let index = 0; index < files.length; index++) {
+                    const file_name_parts = file_names[index].split('.');
+                    const file_extension = file_name_parts.length > 1 ? file_name_parts.pop() : '';
+                    await this.fileService.addFileToAFolder(files[index].originalname, folder_id, user_id, organization_id, files[index].mimetype || '', files[index].size || 0, file_extension, file_names[index]);
+                }
             }
-            console.log(response, 'uploads');
+            return response;
         }
+    }
+    async uploadFileToS3(file, file_name) {
+        const params = {
+            Bucket: 'lockroom',
+            Key: file_name,
+            Body: file,
+            ContentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        };
+        const upload = await this.s3Client.send(new client_s3_1.PutObjectCommand(params));
     }
 };
 exports.UploadService = UploadService;

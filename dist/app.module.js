@@ -35,6 +35,9 @@ const organizations_module_1 = require("./organizations/organizations.module");
 const organization_entity_1 = require("./organizations/entities/organization.entity");
 const group_files_permissions_entity_1 = require("./group-files-permissions/entities/group-files-permissions.entity");
 const group_files_permissions_module_1 = require("./group-files-permissions/group-files-permissions.module");
+const group_files_permissions_controller_1 = require("./group-files-permissions/group-files-permissions.controller");
+const audit_logs_entities_1 = require("./audit-logs/entities/audit-logs.entities");
+const audit_logs_module_1 = require("./audit-logs/audit-logs.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -58,11 +61,13 @@ exports.AppModule = AppModule = __decorate([
                     file_entity_1.File,
                     permission_entity_1.Permission,
                     files_permissions_entity_1.FilesPermissions,
-                    group_files_permissions_entity_1.GroupFilesPermissions
+                    group_files_permissions_entity_1.GroupFilesPermissions,
+                    audit_logs_entities_1.AuditLogs
                 ],
                 synchronize: true,
-                logging: 'all',
-                ssl: false,
+                ssl: {
+                    rejectUnauthorized: false,
+                },
             }),
             throttler_1.ThrottlerModule.forRoot({
                 throttlers: [
@@ -81,9 +86,10 @@ exports.AppModule = AppModule = __decorate([
             files_module_1.FilesModule,
             files_permissions_module_1.FilesPermissionsModule,
             organizations_module_1.OrganizationsModule,
-            group_files_permissions_module_1.GroupFilesPermissionsModule
+            group_files_permissions_module_1.GroupFilesPermissionsModule,
+            audit_logs_module_1.AuditLogsModule
         ],
-        controllers: [app_controller_1.AppController, mail_controller_1.MailController],
+        controllers: [app_controller_1.AppController, mail_controller_1.MailController, group_files_permissions_controller_1.GroupFilesPermissionsController],
         providers: [app_service_1.AppService, email_service_1.EmailService, jwt_1.JwtService],
     })
 ], AppModule);

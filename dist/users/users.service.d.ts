@@ -7,14 +7,16 @@ import { Folder } from 'src/folders/entities/folder.entity';
 import { Group } from 'src/groups/entities/group.entity';
 import { Invite } from 'src/invites/entities/invite.entity';
 import { Organization } from 'src/organizations/entities/organization.entity';
+import { AuditLogsSerivce } from 'src/audit-logs/audit-logs.service';
 export declare class UsersService {
     private readonly userRepository;
     private readonly jwtService;
+    private readonly auditService;
     private readonly folderRepository;
     private readonly groupsRepository;
     private readonly orgRepository;
     private readonly inviteRepository;
-    constructor(userRepository: Repository<User>, jwtService: JwtService, folderRepository: Repository<Folder>, groupsRepository: Repository<Group>, orgRepository: Repository<Organization>, inviteRepository: Repository<Invite>);
+    constructor(userRepository: Repository<User>, jwtService: JwtService, auditService: AuditLogsSerivce, folderRepository: Repository<Folder>, groupsRepository: Repository<Group>, orgRepository: Repository<Organization>, inviteRepository: Repository<Invite>);
     create(createUserDto: CreateUserDto): Promise<{
         user: {
             organization_created: Organization;
@@ -38,28 +40,18 @@ export declare class UsersService {
             groups: Group[];
             sent_invites: Invite[];
             files: import("../files/entities/file.entity").File[];
+            audit_log: import("../audit-logs/entities/audit-logs.entities").AuditLogs[];
             createdAt: Date;
             updatedAt: Date;
         };
         access_token: string;
-        folders: ({
-            name: string;
-            parent_folder_id: any;
-            tree_index: string;
-            users: User[];
-            organization: Organization;
-        } & Folder)[];
         files_count: number;
         id: string;
-        sub_folder_count: any[];
         organizations: Organization[];
     }>;
     loginUser(email: string, password: string): Promise<{
         access_token: string;
         is_phone_number_verified: boolean;
-        folders: Folder[];
-        files_count: number;
-        sub_folder_count: any[];
         id: string;
         user: User;
         organizations: Organization[];
@@ -107,6 +99,7 @@ export declare class UsersService {
             groups: Group[];
             sent_invites: Invite[];
             files: import("../files/entities/file.entity").File[];
+            audit_log: import("../audit-logs/entities/audit-logs.entities").AuditLogs[];
             createdAt: Date;
             updatedAt: Date;
         };
@@ -116,7 +109,6 @@ export declare class UsersService {
     verifyEmail(jwt_token: string): Promise<User>;
     getUserByToken(jwt_token: string): Promise<{
         findUser: User;
-        sub_folder_count: any[];
         organizations: any[];
     }>;
     findAll(): Promise<User[]>;
@@ -125,5 +117,6 @@ export declare class UsersService {
     update(id: number, updateUserDto: UpdateUserDto): string;
     remove(id: number): string;
     clearDB(): Promise<void>;
+    removeAllRecords(): Promise<void>;
     truncateUserTable(): Promise<void>;
 }

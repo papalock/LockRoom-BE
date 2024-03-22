@@ -41,11 +41,17 @@ let FilesPermissionsService = class FilesPermissionsService {
     }
     async findFilePermissiosn(file_id) {
         return await this.filePermRepo.find({
+            relations: ['permission', 'file'],
             where: {
                 file: {
-                    id: file_id
-                }
-            }
+                    id: file_id,
+                },
+            },
+            order: {
+                file: {
+                    tree_index: 'ASC',
+                },
+            },
         });
     }
 };

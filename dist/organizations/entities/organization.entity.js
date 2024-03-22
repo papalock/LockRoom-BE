@@ -17,6 +17,7 @@ const invite_entity_1 = require("../../invites/entities/invite.entity");
 const uuid_1 = require("uuid");
 const file_entity_1 = require("../../files/entities/file.entity");
 const folder_entity_1 = require("../../folders/entities/folder.entity");
+const audit_logs_entities_1 = require("../../audit-logs/entities/audit-logs.entities");
 let Organization = class Organization {
     addId() {
         this.id = (0, uuid_1.v4)();
@@ -37,16 +38,21 @@ __decorate([
     __metadata("design:type", user_entity_1.User)
 ], Organization.prototype, "creator", void 0);
 __decorate([
-    (0, typeorm_1.ManyToMany)(() => user_entity_1.User, user => user.organizations_added_in),
-    (0, typeorm_1.JoinTable)(),
+    (0, typeorm_1.ManyToMany)(() => user_entity_1.User, (user) => user.organizations_added_in),
     __metadata("design:type", Array)
 ], Organization.prototype, "users", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => group_entity_1.Group, (group) => group.organization, { nullable: true, cascade: true }),
+    (0, typeorm_1.OneToMany)(() => group_entity_1.Group, (group) => group.organization, {
+        nullable: true,
+        cascade: true,
+    }),
     __metadata("design:type", Array)
 ], Organization.prototype, "groups", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => invite_entity_1.Invite, (invite) => invite.organization, { nullable: true, cascade: true }),
+    (0, typeorm_1.OneToMany)(() => invite_entity_1.Invite, (invite) => invite.organization, {
+        nullable: true,
+        cascade: true,
+    }),
     __metadata("design:type", Array)
 ], Organization.prototype, "invites", void 0);
 __decorate([
@@ -57,6 +63,10 @@ __decorate([
     (0, typeorm_1.OneToMany)(() => folder_entity_1.Folder, (folder) => folder.organization),
     __metadata("design:type", Array)
 ], Organization.prototype, "folder", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => audit_logs_entities_1.AuditLogs, auditLog => auditLog.organization),
+    __metadata("design:type", Array)
+], Organization.prototype, "audit_log", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' }),
     __metadata("design:type", Date)

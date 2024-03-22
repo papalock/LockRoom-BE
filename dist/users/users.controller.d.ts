@@ -5,15 +5,7 @@ export declare class UsersController {
     private readonly usersService;
     constructor(usersService: UsersService);
     create(createUserDto: CreateUserDto, res: any): Promise<{
-        folders: ({
-            name: string;
-            parent_folder_id: any;
-            tree_index: string;
-            users: import("./entities/user.entity").User[];
-            organization: import("../organizations/entities/organization.entity").Organization;
-        } & import("../folders/entities/folder.entity").Folder)[];
         access_token: string;
-        sub_folder_count: any[];
         id: string;
         user: {
             organization_created: import("../organizations/entities/organization.entity").Organization;
@@ -37,6 +29,7 @@ export declare class UsersController {
             groups: import("../groups/entities/group.entity").Group[];
             sent_invites: import("../invites/entities/invite.entity").Invite[];
             files: import("../files/entities/file.entity").File[];
+            audit_log: import("../audit-logs/entities/audit-logs.entities").AuditLogs[];
             createdAt: Date;
             updatedAt: Date;
         };
@@ -46,9 +39,6 @@ export declare class UsersController {
     login(email: string, password: string): Promise<{
         access_token: string;
         is_phone_number_verified: boolean;
-        folders: import("../folders/entities/folder.entity").Folder[];
-        files_count: number;
-        sub_folder_count: any[];
         id: string;
         user: import("./entities/user.entity").User;
         organizations: import("../organizations/entities/organization.entity").Organization[];
@@ -97,6 +87,7 @@ export declare class UsersController {
             groups: import("../groups/entities/group.entity").Group[];
             sent_invites: import("../invites/entities/invite.entity").Invite[];
             files: import("../files/entities/file.entity").File[];
+            audit_log: import("../audit-logs/entities/audit-logs.entities").AuditLogs[];
             createdAt: Date;
             updatedAt: Date;
         };
@@ -105,7 +96,6 @@ export declare class UsersController {
     }>;
     getUserByToken(jwt_token: string): Promise<{
         findUser: import("./entities/user.entity").User;
-        sub_folder_count: any[];
         organizations: any[];
     }>;
     findOne(id: string): Promise<import("./entities/user.entity").User>;

@@ -19,10 +19,12 @@ const typeorm_2 = require("typeorm");
 const group_files_permissions_entity_1 = require("./entities/group-files-permissions.entity");
 const group_entity_1 = require("../groups/entities/group.entity");
 const typeorm_3 = require("typeorm");
+const permission_entity_1 = require("../permission/entities/permission.entity");
 let GroupFilesPermissionsService = class GroupFilesPermissionsService {
-    constructor(groupFilePermRepo, groupsRepository) {
+    constructor(groupFilePermRepo, groupsRepository, permissionRepository) {
         this.groupFilePermRepo = groupFilePermRepo;
         this.groupsRepository = groupsRepository;
+        this.permissionRepository = permissionRepository;
     }
     async createGroupFilePermissionsFoAllGroups(organization_id, files_permissions) {
         try {
@@ -70,7 +72,7 @@ let GroupFilesPermissionsService = class GroupFilesPermissionsService {
     async updateGroupFilePermissions(group_id, file_permission_id, status) {
         try {
             const find_group_files_permissions = await this.groupFilePermRepo.findOne({
-                relations: ['group', 'file_permission'],
+                relations: ['group', 'file_permission.status'],
                 where: {
                     group: {
                         id: group_id,
@@ -87,16 +89,58 @@ let GroupFilesPermissionsService = class GroupFilesPermissionsService {
             console.log(error);
         }
     }
+    async newUpdateGroupFilePermissions(group_id, file_ids, status, type) {
+        try {
+            console.log(group_id, file_ids, status, type);
+            const find_group_files_permissions = await this.groupFilePermRepo.find({
+                relations: ['group', 'file_permission.permission'],
+                where: {
+                    group: {
+                        id: group_id,
+                    },
+                    file_permission: {
+                        file: {
+                            id: (0, typeorm_3.In)(file_ids),
+                        },
+                        permission: {
+                            type,
+                        },
+                    },
+                },
+            });
+            const permission_ids = [];
+            console.log(permission_ids, 'ids', find_group_files_permissions);
+            find_group_files_permissions.map((gfp) => {
+                permission_ids.push(gfp.file_permission.permission.id);
+            });
+            const update_permissions = await this.permissionRepository.update({
+                id: (0, typeorm_3.In)(permission_ids),
+            }, {
+                status: status,
+            });
+            console.log(update_permissions);
+            if (update_permissions.affected > 0) {
+                return {
+                    update_permissions,
+                    message: status ? 'enabled view on file' : 'disabled view on file',
+                };
+            }
+            return { message: 'failed to update permissions' };
+        }
+        catch (error) {
+            console.log(error);
+        }
+    }
     async getGroupFilesPermissiosnByFileIds(file_ids) {
         try {
             return await this.groupFilePermRepo.find({
                 where: {
                     file_permission: {
                         file: {
-                            id: (0, typeorm_3.In)(file_ids)
-                        }
-                    }
-                }
+                            id: (0, typeorm_3.In)(file_ids),
+                        },
+                    },
+                },
             });
         }
         catch (error) {
@@ -109,7 +153,9 @@ exports.GroupFilesPermissionsService = GroupFilesPermissionsService = __decorate
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(group_files_permissions_entity_1.GroupFilesPermissions)),
     __param(1, (0, typeorm_1.InjectRepository)(group_entity_1.Group)),
+    __param(2, (0, typeorm_1.InjectRepository)(permission_entity_1.Permission)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository])
 ], GroupFilesPermissionsService);
 //# sourceMappingURL=group-files-permissions.service.js.map

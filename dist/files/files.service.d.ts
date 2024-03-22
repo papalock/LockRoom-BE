@@ -16,7 +16,7 @@ export declare class FilesService {
     private readonly orgService;
     constructor(foldersRepository: Repository<Folder>, fileRepository: Repository<File>, userRepository: Repository<User>, fpService: FilesPermissionsService, gfpService: GroupFilesPermissionsService, orgService: OrganizationsService);
     create(createFileDto: CreateFileDto): string;
-    addFileToAFolder(name: string, folder_id: string, user_id: string, organization_id: string, mime_type: string): Promise<{
+    addFileToAFolder(name: string, folder_id: string, user_id: string, organization_id: string, mime_type: string, size: number, extension: string, file_uploaded_name: string): Promise<{
         file_permissions: ({
             file: any;
             permission: {
@@ -33,7 +33,22 @@ export declare class FilesService {
     getAllFilesByOrganization(organization_id: string): Promise<File[]>;
     getFilesWithGroupPermissions(organization_id: string): Promise<void>;
     findAll(): string;
-    findOne(id: number): string;
+    findOne(id: string): Promise<File>;
     update(id: number, updateFileDto: UpdateFileDto): string;
     remove(id: number): string;
+    buildFolderFileStructure(folder: Folder): Promise<{
+        name: string;
+        id: string;
+        type: string;
+        index: string;
+        children: any[];
+    }>;
+    getFoldersAndFilesByOrganizationId(organizationId: string, parent_folder_id: string): Promise<any[]>;
+    getAllFilesByOrg(organizationId: string, parent_folder_id: string): Promise<{
+        name: string;
+        id: string;
+        type: string;
+        index: string;
+        children: any[];
+    }>;
 }

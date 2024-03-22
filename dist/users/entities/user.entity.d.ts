@@ -3,6 +3,7 @@ import { Invite } from '../../invites/entities/invite.entity';
 import { Group } from '../..//groups/entities/group.entity';
 import { File } from 'src/files/entities/file.entity';
 import { Organization } from 'src/organizations/entities/organization.entity';
+import { AuditLogs } from 'src/audit-logs/entities/audit-logs.entities';
 export declare class User {
     id: string;
     first_name: string;
@@ -25,6 +26,7 @@ export declare class User {
     groups: Group[];
     sent_invites: Invite[];
     files: File[];
+    audit_log: AuditLogs[];
     createdAt: Date;
     updatedAt: Date;
     addId(): void;

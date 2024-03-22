@@ -27,11 +27,8 @@ let UsersController = class UsersController {
         res.cookie('sWTNNOCEN', data.access_token, {
             expires: new Date(Date.now() + 3600000),
         });
-        console.log(data, 'dsa');
         return {
-            folders: data.folders,
             access_token: data.access_token,
-            sub_folder_count: data.sub_folder_count,
             id: data.id,
             user: data.user,
             organizations: data.organizations,
@@ -48,7 +45,6 @@ let UsersController = class UsersController {
     }
     async loginWithGmail(jwt_token) {
         const data = await this.usersService.loginWithGoogle(jwt_token);
-        console.log(data, 'datas');
         return data;
     }
     getUserByToken(jwt_token) {
@@ -135,7 +131,7 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "remove", null);
 __decorate([
-    (0, common_1.Delete)('clear'),
+    (0, common_1.Post)('clear'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),

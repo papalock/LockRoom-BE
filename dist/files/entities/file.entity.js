@@ -16,6 +16,7 @@ const uuid_1 = require("uuid");
 const folder_entity_1 = require("../../folders/entities/folder.entity");
 const files_permissions_entity_1 = require("../../files-permissions/entities/files-permissions.entity");
 const organization_entity_1 = require("../../organizations/entities/organization.entity");
+const audit_logs_entities_1 = require("../../audit-logs/entities/audit-logs.entities");
 let File = class File {
     addId() {
         this.id = (0, uuid_1.v4)();
@@ -31,7 +32,18 @@ __decorate([
     __metadata("design:type", String)
 ], File.prototype, "name", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => folder_entity_1.Folder, folder => folder.files, { nullable: true, onDelete: 'CASCADE' }),
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], File.prototype, "file_uploaded_name", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], File.prototype, "original_name", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => folder_entity_1.Folder, (folder) => folder.files, {
+        nullable: true,
+        onDelete: 'CASCADE',
+    }),
     __metadata("design:type", folder_entity_1.Folder)
 ], File.prototype, "folder", void 0);
 __decorate([
@@ -55,11 +67,15 @@ __decorate([
     __metadata("design:type", String)
 ], File.prototype, "bucket_url", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => user_entity_1.User, user => user.files),
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], File.prototype, "extension", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => user_entity_1.User, (user) => user.files),
     __metadata("design:type", user_entity_1.User)
 ], File.prototype, "user", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => files_permissions_entity_1.FilesPermissions, fp => fp.permission),
+    (0, typeorm_1.OneToMany)(() => files_permissions_entity_1.FilesPermissions, (fp) => fp.permission),
     (0, typeorm_1.JoinColumn)(),
     __metadata("design:type", Array)
 ], File.prototype, "FilesPermissions", void 0);
@@ -68,6 +84,11 @@ __decorate([
     (0, typeorm_1.JoinColumn)(),
     __metadata("design:type", organization_entity_1.Organization)
 ], File.prototype, "organization", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => audit_logs_entities_1.AuditLogs, (auditLogs) => auditLogs.file),
+    (0, typeorm_1.JoinColumn)(),
+    __metadata("design:type", audit_logs_entities_1.AuditLogs)
+], File.prototype, "audit_log", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' }),
     __metadata("design:type", Date)

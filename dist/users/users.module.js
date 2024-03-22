@@ -18,6 +18,9 @@ const folder_entity_1 = require("../folders/entities/folder.entity");
 const group_entity_1 = require("../groups/entities/group.entity");
 const invite_entity_1 = require("../invites/entities/invite.entity");
 const organization_entity_1 = require("../organizations/entities/organization.entity");
+const file_entity_1 = require("../files/entities/file.entity");
+const audit_logs_entities_1 = require("../audit-logs/entities/audit-logs.entities");
+const audit_logs_service_1 = require("../audit-logs/audit-logs.service");
 let UsersModule = class UsersModule {
 };
 exports.UsersModule = UsersModule;
@@ -29,10 +32,10 @@ exports.UsersModule = UsersModule = __decorate([
                 secret: process.env.JWT_SECRET,
                 signOptions: { expiresIn: '1h' },
             }),
-            typeorm_1.TypeOrmModule.forFeature([user_entity_1.User, folder_entity_1.Folder, group_entity_1.Group, invite_entity_1.Invite, organization_entity_1.Organization]),
+            typeorm_1.TypeOrmModule.forFeature([user_entity_1.User, folder_entity_1.Folder, group_entity_1.Group, invite_entity_1.Invite, organization_entity_1.Organization, file_entity_1.File, audit_logs_entities_1.AuditLogs]),
         ],
         controllers: [users_controller_1.UsersController],
-        providers: [users_service_1.UsersService],
+        providers: [users_service_1.UsersService, audit_logs_service_1.AuditLogsSerivce],
         exports: [users_service_1.UsersService]
     })
 ], UsersModule);

@@ -22,7 +22,7 @@ let FilesPermissions = class FilesPermissions {
 };
 exports.FilesPermissions = FilesPermissions;
 __decorate([
-    (0, typeorm_1.PrimaryGeneratedColumn)(),
+    (0, typeorm_1.PrimaryGeneratedColumn)('uuid'),
     __metadata("design:type", Number)
 ], FilesPermissions.prototype, "id", void 0);
 __decorate([
@@ -37,6 +37,14 @@ __decorate([
     (0, typeorm_1.OneToMany)(() => group_files_permissions_entity_1.GroupFilesPermissions, (groupFilePermission) => groupFilePermission.file_permission),
     __metadata("design:type", Array)
 ], FilesPermissions.prototype, "group_files_permissions", void 0);
+__decorate([
+    (0, typeorm_1.CreateDateColumn)({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' }),
+    __metadata("design:type", Date)
+], FilesPermissions.prototype, "createdAt", void 0);
+__decorate([
+    (0, typeorm_1.UpdateDateColumn)({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' }),
+    __metadata("design:type", Date)
+], FilesPermissions.prototype, "updatedAt", void 0);
 __decorate([
     (0, typeorm_1.BeforeInsert)(),
     __metadata("design:type", Function),

@@ -34,7 +34,7 @@ let FilesService = class FilesService {
     create(createFileDto) {
         return 'This action adds a new file';
     }
-    async addFileToAFolder(name, folder_id, user_id, organization_id, mime_type) {
+    async addFileToAFolder(name, folder_id, user_id, organization_id, mime_type, size, extension, file_uploaded_name) {
         try {
             const find_user = await this.userRepository.findOne({
                 where: { id: user_id },
@@ -46,6 +46,18 @@ let FilesService = class FilesService {
             });
             if (!find_folder)
                 throw new common_1.NotFoundException('folder not found');
+            const find_file_same_name = await this.fileRepository.find({
+                where: {
+                    original_name: name,
+                },
+            });
+            const original_name = name;
+            if (find_file_same_name.length > 0) {
+                console.log(find_file_same_name.length, 'length file same');
+                find_file_same_name.length == 1
+                    ? (name = 'copy-' + name)
+                    : (name = `copy-${find_file_same_name.length}-${name}`);
+            }
             const all_child_files = await this.fileRepository.find({
                 where: {
                     folder: {
@@ -58,7 +70,8 @@ let FilesService = class FilesService {
                     parent_folder_id: folder_id,
                 },
             });
-            const treeIndex = `${find_folder.tree_index}.`;
+            console.log(all_child_folders, 'folders');
+            const current_tree_index = `${find_folder.tree_index}.`;
             const next = all_child_files.length + all_child_folders.length > 0
                 ? `${all_child_files.length + all_child_folders.length + 1}`
                 : 1;
@@ -67,10 +80,14 @@ let FilesService = class FilesService {
                 name,
                 user: find_user,
                 folder: find_folder,
-                tree_index: treeIndex + next,
+                tree_index: current_tree_index + next,
                 organization,
                 mime_type,
-                bucket_url: 'https://lockroom.s3.amazonaws.com' + name
+                bucket_url: 'https://lockroom.s3.amazonaws.com/' + file_uploaded_name,
+                size_bytes: size,
+                extension,
+                file_uploaded_name,
+                original_name
             });
             const saved_file = await this.fileRepository.save(new_file);
             const file_permissions = await this.fpService.createFilePermissions(saved_file);
@@ -94,7 +111,7 @@ let FilesService = class FilesService {
     async getFilesWithGroupPermissions(organization_id) {
         try {
             const find_files = await this.getAllFilesByOrganization(organization_id);
-            const file_ids = find_files.map(file => file.id);
+            const file_ids = find_files.map((file) => file.id);
             const find_group_files_permissions = this.gfpService.getGroupFilesPermissiosnByFileIds(file_ids);
             console.log(find_group_files_permissions);
         }
@@ -105,14 +122,91 @@ let FilesService = class FilesService {
     findAll() {
         return `This action returns all files`;
     }
-    findOne(id) {
-        return `This action returns a #${id} file`;
+    async findOne(id) {
+        return await this.fileRepository.findOne({
+            where: {
+                id,
+            },
+        });
     }
     update(id, updateFileDto) {
         return `This action updates a #${id} file`;
     }
     remove(id) {
         return `This action removes a #${id} file`;
+    }
+    async buildFolderFileStructure(folder) {
+        const folder_files = {
+            name: folder.name,
+            id: folder.id,
+            type: 'folder',
+            index: folder.tree_index,
+            children: [],
+        };
+        if (folder.files && folder.files.length > 0) {
+            for (const file of folder.files) {
+                const file_permissions = await this.fpService.findFilePermissiosn(file.id);
+                console.log(file_permissions[0].permission.status, file_permissions[0].permission.type);
+                const file_access = {
+                    type: 'file',
+                    name: file.name,
+                    has_view_access: file_permissions[0].permission.type == 'view'
+                        ? file_permissions[0].permission.status
+                        : file_permissions[1].permission.status,
+                    has_download_access: file_permissions[1].permission.type == 'download'
+                        ? file_permissions[1].permission.status
+                        : file_permissions[0].permission.status,
+                    index: file.tree_index,
+                    mime_type: file.mime_type,
+                    file_id: file.id,
+                    url: file.bucket_url,
+                    extension: file.extension,
+                };
+                folder_files.children.push(file_access);
+            }
+        }
+        folder_files.children = folder_files.children.sort((a, b) => Number(a.index) - Number(b.index));
+        return folder_files;
+    }
+    async getFoldersAndFilesByOrganizationId(organizationId, parent_folder_id) {
+        const root_folders = await this.foldersRepository.find({
+            where: {
+                organization: { id: organizationId },
+                parent_folder_id: parent_folder_id,
+            },
+            relations: ['sub_folders', 'files.organization'],
+            order: {
+                tree_index: 'ASC',
+            },
+        });
+        const folder_file_structures = [];
+        if (root_folders.length > 0) {
+            for (const root_folder of root_folders) {
+                const folder_file_structure = await this.buildFolderFileStructure(root_folder);
+                folder_file_structures.push(folder_file_structure);
+            }
+            for (const sub of folder_file_structures) {
+                const folder_file_structure = await this.getFoldersAndFilesByOrganizationId(organizationId, sub.id);
+                sub.children.push(...folder_file_structure);
+            }
+        }
+        return folder_file_structures;
+    }
+    async getAllFilesByOrg(organizationId, parent_folder_id) {
+        const result = await this.getFoldersAndFilesByOrganizationId(organizationId, parent_folder_id);
+        const home_folder = JSON.parse(JSON.stringify(await this.foldersRepository.findOne({
+            where: {
+                organization: { id: organizationId },
+                id: parent_folder_id,
+            },
+            relations: ['sub_folders', 'files.organization'],
+        })));
+        const folder_file_structure = await this.buildFolderFileStructure(home_folder);
+        folder_file_structure.children = [
+            ...folder_file_structure.children,
+            ...result,
+        ].sort((a, b) => a.index - b.index);
+        return folder_file_structure;
     }
 };
 exports.FilesService = FilesService;

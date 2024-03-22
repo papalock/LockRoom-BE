@@ -21,7 +21,7 @@ let UploadController = class UploadController {
         this.uploadService = uploadService;
     }
     async uploadFile(files, organization_id, user_id, folder_id) {
-        await this.uploadService.uploadMultiple(files, folder_id, user_id, organization_id);
+        return await this.uploadService.uploadMultiple(files, folder_id, user_id, organization_id);
     }
 };
 exports.UploadController = UploadController;

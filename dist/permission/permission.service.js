@@ -29,11 +29,11 @@ let PermissionService = class PermissionService {
             const new_permissions = [
                 {
                     type: 'view',
-                    status: false,
+                    status: true,
                 },
                 {
                     type: 'download',
-                    status: false,
+                    status: true,
                 },
             ];
             return await this.permissionRepo.save(new_permissions);

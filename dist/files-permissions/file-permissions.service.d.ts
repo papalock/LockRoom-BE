@@ -12,5 +12,5 @@ export declare class FilesPermissionsService {
             status: boolean;
         } & import("../permission/entities/permission.entity").Permission;
     } & FilesPermissions)[]>;
-    findFilePermissiosn(file_id: any): Promise<FilesPermissions[]>;
+    findFilePermissiosn(file_id: string): Promise<FilesPermissions[]>;
 }

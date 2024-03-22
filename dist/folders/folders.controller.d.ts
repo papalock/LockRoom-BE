@@ -24,6 +24,7 @@ export declare class FoldersController {
             updatedAt: Date;
         };
         files_count: number;
+        parent_folder: import("./entities/folder.entity").Folder;
     }>;
     findAll(): Promise<void>;
     findAllByOrganization(organization_id: string, user_id: string): Promise<{

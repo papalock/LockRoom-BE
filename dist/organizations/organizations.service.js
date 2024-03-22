@@ -58,7 +58,6 @@ let OrganizationsService = class OrganizationsService {
             });
             if (!find_org)
                 throw new common_1.NotFoundException('organization not found');
-            console.log(find_invites.filter(item => item.status == 'pending'), 'invites');
             return {
                 organization: find_org,
                 invites: find_invites.filter(item => item.status == 'pending'),
