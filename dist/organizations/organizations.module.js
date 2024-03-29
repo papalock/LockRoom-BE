@@ -14,6 +14,7 @@ const organization_entity_1 = require("./entities/organization.entity");
 const typeorm_1 = require("@nestjs/typeorm");
 const group_entity_1 = require("../groups/entities/group.entity");
 const invite_entity_1 = require("../invites/entities/invite.entity");
+const jwt_1 = require("@nestjs/jwt");
 let OrganizationsModule = class OrganizationsModule {
 };
 exports.OrganizationsModule = OrganizationsModule;
@@ -21,7 +22,7 @@ exports.OrganizationsModule = OrganizationsModule = __decorate([
     (0, common_1.Module)({
         imports: [typeorm_1.TypeOrmModule.forFeature([organization_entity_1.Organization, group_entity_1.Group, invite_entity_1.Invite])],
         controllers: [organizations_controller_1.OrganizationsController],
-        providers: [organizations_service_1.OrganizationsService],
+        providers: [organizations_service_1.OrganizationsService, jwt_1.JwtService],
         exports: [organizations_service_1.OrganizationsService]
     })
 ], OrganizationsModule);

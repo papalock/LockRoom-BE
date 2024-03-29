@@ -49,6 +49,7 @@ let FoldersService = class FoldersService {
             where: {
                 parent_folder_id,
                 name: name,
+                is_deleted: false
             },
         });
         if (child_folders_with_same_name.length > 0)
@@ -79,13 +80,13 @@ let FoldersService = class FoldersService {
                 id: organization_id,
             },
         });
-        console.log(current_tree_index + next, 'treehehehe');
         const new_folder = await this.foldersRepository.save({
             name,
             parent_folder_id,
             tree_index: current_tree_index + next,
             users: [user],
             organization: find_org,
+            absolute_path: parent_folder.absolute_path + '/' + name,
         });
         const new_folder_1 = {
             ...new_folder,
@@ -98,7 +99,7 @@ let FoldersService = class FoldersService {
         const query = this.foldersRepository
             .createQueryBuilder('folder')
             .leftJoinAndSelect('folder.users', 'user')
-            .where('user.id = :userId', { userId: user.id });
+            .where('user.id = :user_id', { user_id: user.id });
         if (parent_folder_id) {
             query.andWhere('folder.parent_folder_id = :parent_folder_id', {
                 parent_folder_id,
@@ -120,6 +121,8 @@ let FoldersService = class FoldersService {
         const repos = await this.foldersRepository.find();
     }
     async findAllByOrganization(organization_id, user_id) {
+        if (!organization_id || !user_id)
+            throw new common_1.NotFoundException('Missing Fields');
         const find_user = await this.userService.findOne({
             id: user_id,
         });
@@ -129,6 +132,9 @@ let FoldersService = class FoldersService {
                 where: {
                     organization: {
                         id: find_user.organization_created.id,
+                    },
+                    folder: {
+                        is_deleted: false,
                     },
                 },
             });
@@ -155,6 +161,7 @@ let FoldersService = class FoldersService {
                 .where('folder.organization.id = :organizationId', {
                 organizationId: organization_id,
             })
+                .andWhere('folder.is_deleted = :isDeleted', { isDeleted: false })
                 .groupBy('folder.id, user.id')
                 .orderBy('folder.createdAt', 'ASC')
                 .addSelect('folder.id', 'id')
@@ -188,6 +195,11 @@ let FoldersService = class FoldersService {
                             type: 'view',
                             status: true,
                         },
+                        file: {
+                            folder: {
+                                is_deleted: false,
+                            },
+                        },
                     },
                 },
             });
@@ -213,6 +225,7 @@ let FoldersService = class FoldersService {
                 .where('folder.organization.id = :organizationId', {
                 organizationId: organization_id,
             })
+                .andWhere('folder.is_deleted = :isDeleted', { isDeleted: false })
                 .groupBy('folder.id, user.id')
                 .orderBy('folder.createdAt', 'ASC')
                 .addSelect('folder.id', 'id')
@@ -224,18 +237,16 @@ let FoldersService = class FoldersService {
             };
         }
     }
-    async findAllByUserId(userId) {
-        const repos = await this.foldersRepository.find({
+    async findAllByUserId(user_id) {
+        if (!user_id)
+            throw new common_1.NotFoundException('Missing Fields');
+        return await this.foldersRepository.find({
             where: {
                 users: {
-                    id: userId,
+                    id: user_id,
                 },
             },
         });
-        console.log(repos);
-    }
-    findOne(id) {
-        return `This action returns a #${id} folder`;
     }
     async update(prev_name, new_name, parent_folder_id) {
         const findRepo = await this.foldersRepository.find({
@@ -263,69 +274,39 @@ let FoldersService = class FoldersService {
             name: new_name,
         });
     }
-    async remove(id) {
-        return await this.foldersRepository.update({
-            id: id,
-        }, {
-            is_deleted: true,
-        });
-    }
-    async createFolderWithDefaultPermissions(name, sub, parent_folder_id) {
-        const parent_folder = await this.foldersRepository.findOne({
-            where: {
-                id: parent_folder_id,
-            },
-        });
-        if (!parent_folder)
-            throw new common_1.NotFoundException('parent folder found');
-        const child_folders_with_same_name = await this.foldersRepository.find({
-            where: {
-                parent_folder_id,
-                name: name,
-            },
-        });
-        if (child_folders_with_same_name.length > 0)
-            throw new common_1.ConflictException('folder already exists with same name');
-        const user = await this.userService.findOne({
-            sub,
-        });
-        const all_child_folders = await this.foldersRepository.find({
-            where: {
-                parent_folder_id,
-            },
-        });
-        const current_tree_index = `${parent_folder.tree_index}.`;
-        const next = all_child_folders.length > 0 ? `${all_child_folders.length + 1}` : 1;
-        console.log(current_tree_index + next, 'trehehehe1');
-        if (!user)
-            throw new common_1.NotFoundException('user not found');
-        const new_folder = await this.foldersRepository.save({
-            name,
-            parent_folder_id,
-            tree_index: current_tree_index + next,
-            users: [user],
-        });
-        const new_folder_1 = {
-            ...new_folder,
-            folder_name: new_folder.name,
-            folder_parent_folder_id: new_folder.parent_folder_id,
-            folder_tree_index: new_folder.tree_index,
-            folder_createdAt: new_folder.createdAt,
-            folder_id: new_folder.id,
-        };
-        const query = this.foldersRepository
-            .createQueryBuilder('folder')
-            .leftJoinAndSelect('folder.users', 'user')
-            .where('user.id = :userId', { userId: user.id });
-        if (parent_folder_id) {
-            query.andWhere('folder.parent_folder_id = :parent_folder_id', {
-                parent_folder_id,
+    async soft_delete(id) {
+        try {
+            return await this.foldersRepository.update({
+                id: id,
+            }, {
+                is_deleted: true,
             });
         }
-        else {
-            query.andWhere('folder.parent_folder_id IS NULL');
+        catch (error) {
+            throw new common_1.InternalServerErrorException(error.message);
         }
-        await query.getMany();
+    }
+    async rename(folder_id, new_name, parent_folder_id) {
+        try {
+            const check_same_name_folder = await this.foldersRepository.find({
+                where: {
+                    parent_folder_id,
+                    name: new_name,
+                    is_deleted: false
+                },
+            });
+            if (check_same_name_folder.length > 0)
+                return new common_1.ConflictException('folder with same already exists');
+            return await this.foldersRepository.update({
+                id: folder_id,
+            }, {
+                name: new_name,
+            });
+        }
+        catch (error) {
+            console.log(error);
+            throw new common_1.InternalServerErrorException(error.message);
+        }
     }
 };
 exports.FoldersService = FoldersService;

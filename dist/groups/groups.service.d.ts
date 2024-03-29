@@ -14,13 +14,11 @@ export declare class GroupsService {
     private readonly gfpService;
     constructor(groupsRepository: Repository<Group>, userRepository: Repository<User>, orgRepository: Repository<Organization>, fpRepository: Repository<FilesPermissions>, fileService: FilesService, gfpService: GroupFilesPermissionsService);
     create(name: string, user_id: string, organization_id: string): Promise<Group>;
-    addUserToAGroup(groupId: string, user_id: string, sender_name: string): Promise<Group>;
-    removeUserFromGroup(groupId: string, user_id: string): Promise<Group>;
+    addUserToAGroup(group_id: string, user_id: string, sender_name: string): Promise<Group>;
+    removeUserFromGroup(group_id: string, user_id: string): Promise<Group>;
     findAll(): Promise<Group[]>;
     findAllUsersInGroup(id: string): Promise<Group>;
     findOne(id: string): Promise<Group>;
     getGroupsByOrganization(organization_id: string, user_id: string): Promise<any[]>;
     getGroupsByOrg(organization_id: string): Promise<Group[]>;
-    update(id: number): string;
-    remove(id: number): string;
 }

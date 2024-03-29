@@ -23,12 +23,6 @@ let OrganizationsService = class OrganizationsService {
         this.orgRepository = orgRepository;
         this.inviteRepository = inviteRepository;
     }
-    create(createOrganizationDto) {
-        return 'This action adds a new organization';
-    }
-    findAll() {
-        return `This action returns all organizations`;
-    }
     async findOne(id) {
         return await this.orgRepository.findOne({
             relations: ['groups'],
@@ -70,7 +64,6 @@ let OrganizationsService = class OrganizationsService {
     }
     async getUsersByOrganizationAndGroup(organization_id, group_id) {
         try {
-            console.log(organization_id, group_id);
             const find_org = await this.orgRepository.findOne({
                 relations: ['creator', 'groups.users'],
                 where: {
@@ -103,12 +96,6 @@ let OrganizationsService = class OrganizationsService {
             console.log(error);
             return error;
         }
-    }
-    update(id, updateOrganizationDto) {
-        return `This action updates a #${id} organization`;
-    }
-    remove(id) {
-        return `This action removes a #${id} organization`;
     }
 };
 exports.OrganizationsService = OrganizationsService;

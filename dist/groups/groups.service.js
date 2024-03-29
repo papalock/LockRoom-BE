@@ -36,6 +36,8 @@ let GroupsService = class GroupsService {
     }
     async create(name, user_id, organization_id) {
         try {
+            if (!name || !user_id || !organization_id)
+                throw new common_1.NotFoundException('Missing Fields');
             const group = await this.groupsRepository.findOne({
                 where: {
                     name: name,
@@ -68,27 +70,29 @@ let GroupsService = class GroupsService {
                 },
             });
             const saved_group = await this.groupsRepository.save(new_group);
-            const new_group_file_permissions = await this.gfpService.createGroupFilePermissionsForOneGroup(saved_group, find_file_permissions);
-            console.log(new_group_file_permissions);
+            await this.gfpService.createGroupFilePermissionsForOneGroup(saved_group, find_file_permissions);
             return saved_group;
         }
         catch (error) {
             console.log(error, 'err');
+            throw Error(error);
         }
     }
-    async addUserToAGroup(groupId, user_id, sender_name) {
+    async addUserToAGroup(group_id, user_id, sender_name) {
         try {
+            if (!group_id || !user_id || !sender_name)
+                throw new common_1.NotFoundException('Missing Fields');
             const find_group = await this.groupsRepository.findOne({
                 relations: ['users'],
                 where: {
-                    id: groupId,
+                    id: group_id,
                 },
             });
             const find_org = await this.orgRepository.findOne({
                 relations: ['users'],
                 where: {
                     groups: {
-                        id: groupId,
+                        id: group_id,
                     },
                 },
             });
@@ -121,13 +125,14 @@ let GroupsService = class GroupsService {
         }
         catch (error) {
             console.log(error);
+            throw error;
         }
     }
-    async removeUserFromGroup(groupId, user_id) {
+    async removeUserFromGroup(group_id, user_id) {
         const group = await this.groupsRepository.findOne({
             relations: ['users'],
             where: {
-                id: groupId,
+                id: group_id,
             },
         });
         const user = await this.userRepository.findOne({
@@ -168,6 +173,8 @@ let GroupsService = class GroupsService {
     }
     async getGroupsByOrganization(organization_id, user_id) {
         try {
+            if (!organization_id || !user_id)
+                throw new common_1.NotFoundException('Missing Fields');
             const groups_result = [];
             const find_groups = await this.groupsRepository.find({
                 relations: ['users', 'organization.creator'],
@@ -200,12 +207,6 @@ let GroupsService = class GroupsService {
                 },
             },
         });
-    }
-    update(id) {
-        return `This action updates a #${id} group`;
-    }
-    remove(id) {
-        return `This action removes a #${id} group`;
     }
 };
 exports.GroupsService = GroupsService;

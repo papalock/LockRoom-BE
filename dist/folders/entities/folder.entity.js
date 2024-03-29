@@ -46,6 +46,10 @@ __decorate([
     __metadata("design:type", String)
 ], Folder.prototype, "tree_index", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ nullable: false }),
+    __metadata("design:type", String)
+], Folder.prototype, "absolute_path", void 0);
+__decorate([
     (0, typeorm_1.OneToMany)(() => Folder, (Folder) => Folder.parentFolder),
     __metadata("design:type", Array)
 ], Folder.prototype, "sub_folders", void 0);

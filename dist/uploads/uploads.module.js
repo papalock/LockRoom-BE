@@ -28,6 +28,11 @@ const group_entity_1 = require("../groups/entities/group.entity");
 const organization_entity_1 = require("../organizations/entities/organization.entity");
 const invite_entity_1 = require("../invites/entities/invite.entity");
 const permission_entity_1 = require("../permission/entities/permission.entity");
+const jwt_1 = require("@nestjs/jwt");
+const folders_service_1 = require("../folders/folders.service");
+const users_service_1 = require("../users/users.service");
+const audit_logs_service_1 = require("../audit-logs/audit-logs.service");
+const audit_logs_entities_1 = require("../audit-logs/entities/audit-logs.entities");
 let UploadsModule = class UploadsModule {
 };
 exports.UploadsModule = UploadsModule;
@@ -54,7 +59,8 @@ exports.UploadsModule = UploadsModule = __decorate([
                 group_entity_1.Group,
                 organization_entity_1.Organization,
                 invite_entity_1.Invite,
-                permission_entity_1.Permission
+                permission_entity_1.Permission,
+                audit_logs_entities_1.AuditLogs
             ]),
         ],
         controllers: [uploads_controller_1.UploadController],
@@ -68,7 +74,11 @@ exports.UploadsModule = UploadsModule = __decorate([
             file_permissions_service_1.FilesPermissionsService,
             group_files_permissions_service_1.GroupFilesPermissionsService,
             organizations_service_1.OrganizationsService,
-            permission_service_1.PermissionService
+            permission_service_1.PermissionService,
+            jwt_1.JwtService,
+            folders_service_1.FoldersService,
+            users_service_1.UsersService,
+            audit_logs_service_1.AuditLogsSerivce
         ],
     })
 ], UploadsModule);

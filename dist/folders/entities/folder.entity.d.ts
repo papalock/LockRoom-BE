@@ -8,6 +8,7 @@ export declare class Folder {
     parent_folder_id: string;
     is_deleted: boolean;
     tree_index: string;
+    absolute_path: string;
     sub_folders: Folder[];
     files: File[];
     users: User[];

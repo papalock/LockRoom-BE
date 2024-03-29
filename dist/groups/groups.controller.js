@@ -15,59 +15,44 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.GroupsController = void 0;
 const common_1 = require("@nestjs/common");
 const groups_service_1 = require("./groups.service");
-const update_group_dto_1 = require("./dto/update-group.dto");
+const auth_guard_1 = require("../guards/auth.guard");
 let GroupsController = class GroupsController {
     constructor(groupsService) {
         this.groupsService = groupsService;
     }
-    create(name, user_id, organization_id) {
-        return this.groupsService.create(name, user_id, organization_id);
+    create(name, organization_id, request) {
+        return this.groupsService.create(name, request.decoded_data.user_id, organization_id);
     }
-    removeUserFromAGroup(groupId, userId) {
-        return this.groupsService.removeUserFromGroup(groupId, userId);
-    }
-    findAll() {
-        return this.groupsService.findAll();
+    removeUserFromAGroup(groupId, request) {
+        return this.groupsService.removeUserFromGroup(groupId, request.decoded_data.user_id);
     }
     findAllUsersInGroup(id) {
         return this.groupsService.findAllUsersInGroup(id);
     }
-    findGroupsByOrganizationAndUserId(organization_id, user_id) {
-        return this.groupsService.getGroupsByOrganization(organization_id, user_id);
-    }
-    findOne(id) {
-        return this.groupsService.findOne(id);
-    }
-    update(id, updateGroupDto) {
-    }
-    remove(id) {
-        return this.groupsService.remove(+id);
+    findGroupsByOrganizationAndUserId(organization_id, request) {
+        return this.groupsService.getGroupsByOrganization(organization_id, request.decoded_data.user_id);
     }
 };
 exports.GroupsController = GroupsController;
 __decorate([
+    (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
     (0, common_1.Post)(),
     __param(0, (0, common_1.Body)('name')),
-    __param(1, (0, common_1.Body)('user_id')),
-    __param(2, (0, common_1.Body)('organization_id')),
+    __param(1, (0, common_1.Body)('organization_id')),
+    __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String]),
+    __metadata("design:paramtypes", [String, String, Object]),
     __metadata("design:returntype", void 0)
 ], GroupsController.prototype, "create", null);
 __decorate([
+    (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
     (0, common_1.Post)('remove-user'),
     __param(0, (0, common_1.Body)('groupId')),
-    __param(1, (0, common_1.Body)('userId')),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], GroupsController.prototype, "removeUserFromAGroup", null);
-__decorate([
-    (0, common_1.Get)(),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
-], GroupsController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Post)('find-users'),
     __param(0, (0, common_1.Body)('id')),
@@ -76,35 +61,14 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], GroupsController.prototype, "findAllUsersInGroup", null);
 __decorate([
+    (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
     (0, common_1.Post)('org-groups'),
     __param(0, (0, common_1.Body)('organization_id')),
-    __param(1, (0, common_1.Body)('user_id')),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], GroupsController.prototype, "findGroupsByOrganizationAndUserId", null);
-__decorate([
-    (0, common_1.Get)(':id'),
-    __param(0, (0, common_1.Param)('id')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
-], GroupsController.prototype, "findOne", null);
-__decorate([
-    (0, common_1.Patch)(':id'),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, update_group_dto_1.UpdateGroupDto]),
-    __metadata("design:returntype", void 0)
-], GroupsController.prototype, "update", null);
-__decorate([
-    (0, common_1.Delete)(':id'),
-    __param(0, (0, common_1.Param)('id')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
-], GroupsController.prototype, "remove", null);
 exports.GroupsController = GroupsController = __decorate([
     (0, common_1.Controller)('groups'),
     __metadata("design:paramtypes", [groups_service_1.GroupsService])

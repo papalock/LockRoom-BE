@@ -1,6 +1,5 @@
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
 export declare class UsersController {
     private readonly usersService;
     constructor(usersService: UsersService);
@@ -35,7 +34,6 @@ export declare class UsersController {
         };
         organizations: import("../organizations/entities/organization.entity").Organization[];
     }>;
-    findAllGroupsByUserId(userId: string): Promise<import("../groups/entities/group.entity").Group[]>;
     login(email: string, password: string): Promise<{
         access_token: string;
         is_phone_number_verified: boolean;
@@ -43,7 +41,15 @@ export declare class UsersController {
         user: import("./entities/user.entity").User;
         organizations: import("../organizations/entities/organization.entity").Organization[];
     }>;
-    verifyEmail(jwt_token: string): Promise<import("./entities/user.entity").User>;
+    findAllGroupsByUserId(request: any): Promise<import("../groups/entities/group.entity").Group[]>;
+    verifyEmail(request: any): Promise<import("./entities/user.entity").User>;
+    getUserByToken(request: any): Promise<{
+        findUser: import("./entities/user.entity").User;
+        organizations: any[];
+    }>;
+    deleteDB(): Promise<{
+        success: boolean;
+    }>;
     loginWithGmail(jwt_token: string): Promise<{
         access_token: string;
         is_phone_number_verified: boolean;
@@ -61,6 +67,7 @@ export declare class UsersController {
             tree_index: string;
             users: import("./entities/user.entity").User[];
             organization: import("../organizations/entities/organization.entity").Organization;
+            absolute_path: string;
         } & import("../folders/entities/folder.entity").Folder)[];
         files_count: number;
         id: string;
@@ -94,12 +101,4 @@ export declare class UsersController {
         organizations: import("../organizations/entities/organization.entity").Organization[];
         is_phone_number_verified?: undefined;
     }>;
-    getUserByToken(jwt_token: string): Promise<{
-        findUser: import("./entities/user.entity").User;
-        organizations: any[];
-    }>;
-    findOne(id: string): Promise<import("./entities/user.entity").User>;
-    update(id: string, updateUserDto: UpdateUserDto): string;
-    remove(id: string): string;
-    deleteDB(id: string): Promise<void>;
 }

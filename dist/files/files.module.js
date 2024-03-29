@@ -25,6 +25,11 @@ const group_entity_1 = require("../groups/entities/group.entity");
 const organization_entity_1 = require("../organizations/entities/organization.entity");
 const organizations_service_1 = require("../organizations/organizations.service");
 const invite_entity_1 = require("../invites/entities/invite.entity");
+const jwt_1 = require("@nestjs/jwt");
+const folders_service_1 = require("../folders/folders.service");
+const users_service_1 = require("../users/users.service");
+const audit_logs_service_1 = require("../audit-logs/audit-logs.service");
+const audit_logs_entities_1 = require("../audit-logs/entities/audit-logs.entities");
 let FilesModule = class FilesModule {
 };
 exports.FilesModule = FilesModule;
@@ -40,7 +45,8 @@ exports.FilesModule = FilesModule = __decorate([
                 group_files_permissions_entity_1.GroupFilesPermissions,
                 group_entity_1.Group,
                 organization_entity_1.Organization,
-                invite_entity_1.Invite
+                invite_entity_1.Invite,
+                audit_logs_entities_1.AuditLogs
             ]),
         ],
         controllers: [files_controller_1.FilesController],
@@ -51,6 +57,10 @@ exports.FilesModule = FilesModule = __decorate([
             group_files_permissions_service_1.GroupFilesPermissionsService,
             groups_service_1.GroupsService,
             organizations_service_1.OrganizationsService,
+            jwt_1.JwtService,
+            folders_service_1.FoldersService,
+            users_service_1.UsersService,
+            audit_logs_service_1.AuditLogsSerivce
         ],
     })
 ], FilesModule);

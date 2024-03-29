@@ -21,9 +21,6 @@ let PermissionService = class PermissionService {
     constructor(permissionRepo) {
         this.permissionRepo = permissionRepo;
     }
-    create(createPermissionDto) {
-        return 'This action adds a new permission';
-    }
     async createNewPermissions() {
         try {
             const new_permissions = [
@@ -41,18 +38,6 @@ let PermissionService = class PermissionService {
         catch (error) {
             console.log(error);
         }
-    }
-    findAll() {
-        return `This action returns all permission`;
-    }
-    findOne(id) {
-        return `This action returns a #${id} permission`;
-    }
-    update(id, updatePermissionDto) {
-        return `This action updates a #${id} permission`;
-    }
-    remove(id) {
-        return `This action removes a #${id} permission`;
     }
 };
 exports.PermissionService = PermissionService;

@@ -22,20 +22,28 @@ const file_entity_1 = require("./entities/file.entity");
 const file_permissions_service_1 = require("../files-permissions/file-permissions.service");
 const group_files_permissions_service_1 = require("../group-files-permissions/group-files-permissions.service");
 const organizations_service_1 = require("../organizations/organizations.service");
+const folders_service_1 = require("../folders/folders.service");
 let FilesService = class FilesService {
-    constructor(foldersRepository, fileRepository, userRepository, fpService, gfpService, orgService) {
+    constructor(foldersRepository, fileRepository, userRepository, fpService, folderService, gfpService, orgService) {
         this.foldersRepository = foldersRepository;
         this.fileRepository = fileRepository;
         this.userRepository = userRepository;
         this.fpService = fpService;
+        this.folderService = folderService;
         this.gfpService = gfpService;
         this.orgService = orgService;
     }
-    create(createFileDto) {
-        return 'This action adds a new file';
-    }
     async addFileToAFolder(name, folder_id, user_id, organization_id, mime_type, size, extension, file_uploaded_name) {
         try {
+            if (!name ||
+                !folder_id ||
+                !user_id ||
+                !organization_id ||
+                !mime_type ||
+                !size ||
+                !extension ||
+                !file_uploaded_name)
+                throw new common_1.NotFoundException('Missing Fields');
             const find_user = await this.userRepository.findOne({
                 where: { id: user_id },
             });
@@ -48,12 +56,14 @@ let FilesService = class FilesService {
                 throw new common_1.NotFoundException('folder not found');
             const find_file_same_name = await this.fileRepository.find({
                 where: {
+                    folder: {
+                        id: find_folder.id,
+                    },
                     original_name: name,
                 },
             });
             const original_name = name;
             if (find_file_same_name.length > 0) {
-                console.log(find_file_same_name.length, 'length file same');
                 find_file_same_name.length == 1
                     ? (name = 'copy-' + name)
                     : (name = `copy-${find_file_same_name.length}-${name}`);
@@ -70,7 +80,6 @@ let FilesService = class FilesService {
                     parent_folder_id: folder_id,
                 },
             });
-            console.log(all_child_folders, 'folders');
             const current_tree_index = `${find_folder.tree_index}.`;
             const next = all_child_files.length + all_child_folders.length > 0
                 ? `${all_child_files.length + all_child_folders.length + 1}`
@@ -87,7 +96,7 @@ let FilesService = class FilesService {
                 size_bytes: size,
                 extension,
                 file_uploaded_name,
-                original_name
+                original_name,
             });
             const saved_file = await this.fileRepository.save(new_file);
             const file_permissions = await this.fpService.createFilePermissions(saved_file);
@@ -96,44 +105,52 @@ let FilesService = class FilesService {
         }
         catch (error) {
             console.log(error);
+            throw Error(error);
         }
     }
     async getAllFilesByOrganization(organization_id) {
-        return this.fileRepository.find({
-            relations: ['folder'],
-            where: {
-                organization: {
-                    id: organization_id,
+        try {
+            if (!organization_id)
+                throw new common_1.NotFoundException('Missing Fields');
+            return this.fileRepository.find({
+                relations: ['folder'],
+                where: {
+                    organization: {
+                        id: organization_id,
+                    },
                 },
-            },
-        });
+            });
+        }
+        catch (error) {
+            throw Error(error);
+        }
     }
     async getFilesWithGroupPermissions(organization_id) {
         try {
+            if (!organization_id)
+                throw new common_1.NotFoundException('Missing Fields');
             const find_files = await this.getAllFilesByOrganization(organization_id);
             const file_ids = find_files.map((file) => file.id);
-            const find_group_files_permissions = this.gfpService.getGroupFilesPermissiosnByFileIds(file_ids);
-            console.log(find_group_files_permissions);
+            await this.gfpService.getGroupFilesPermissiosnByFileIds(file_ids);
         }
         catch (error) {
             console.log(error);
+            throw Error(error);
         }
     }
-    findAll() {
-        return `This action returns all files`;
-    }
     async findOne(id) {
-        return await this.fileRepository.findOne({
-            where: {
-                id,
-            },
-        });
-    }
-    update(id, updateFileDto) {
-        return `This action updates a #${id} file`;
-    }
-    remove(id) {
-        return `This action removes a #${id} file`;
+        try {
+            if (!id)
+                throw new common_1.NotFoundException('Missing Fields');
+            return await this.fileRepository.findOne({
+                where: {
+                    id,
+                },
+            });
+        }
+        catch (error) {
+            throw Error(error);
+        }
     }
     async buildFolderFileStructure(folder) {
         const folder_files = {
@@ -168,11 +185,12 @@ let FilesService = class FilesService {
         folder_files.children = folder_files.children.sort((a, b) => Number(a.index) - Number(b.index));
         return folder_files;
     }
-    async getFoldersAndFilesByOrganizationId(organizationId, parent_folder_id) {
+    async getFoldersAndFilesByOrganizationId(organization_id, parent_folder_id) {
         const root_folders = await this.foldersRepository.find({
             where: {
-                organization: { id: organizationId },
+                organization: { id: organization_id },
                 parent_folder_id: parent_folder_id,
+                is_deleted: false
             },
             relations: ['sub_folders', 'files.organization'],
             order: {
@@ -186,27 +204,185 @@ let FilesService = class FilesService {
                 folder_file_structures.push(folder_file_structure);
             }
             for (const sub of folder_file_structures) {
-                const folder_file_structure = await this.getFoldersAndFilesByOrganizationId(organizationId, sub.id);
+                const folder_file_structure = await this.getFoldersAndFilesByOrganizationId(organization_id, sub.id);
                 sub.children.push(...folder_file_structure);
             }
         }
         return folder_file_structures;
     }
-    async getAllFilesByOrg(organizationId, parent_folder_id) {
-        const result = await this.getFoldersAndFilesByOrganizationId(organizationId, parent_folder_id);
-        const home_folder = JSON.parse(JSON.stringify(await this.foldersRepository.findOne({
+    async getAllFilesByOrg(organization_id, parent_folder_id) {
+        try {
+            if (!organization_id)
+                throw new common_1.NotFoundException('Missing Fields');
+            const result = await this.getFoldersAndFilesByOrganizationId(organization_id, parent_folder_id);
+            const home_folder = JSON.parse(JSON.stringify(await this.foldersRepository.findOne({
+                where: {
+                    organization: { id: organization_id },
+                    id: parent_folder_id
+                },
+                relations: ['sub_folders', 'files.organization'],
+            })));
+            const folder_file_structure = await this.buildFolderFileStructure(home_folder);
+            folder_file_structure.children = [
+                ...folder_file_structure.children,
+                ...result,
+            ].sort((a, b) => a.index - b.index);
+            return folder_file_structure;
+        }
+        catch (error) {
+            throw Error(error);
+        }
+    }
+    async dragAndDropFiles(organization_id, parent_folder_id, user_id, files_data) {
+        console.log(files_data, 'dataaa');
+        const f_d = [
+            {
+                name: 'Vector.svg',
+                file_path: '/LockRoom (2.0)/LockRoom (1)/UX',
+                mime_type: 'image/svg+xml',
+                size: 322
+            },
+            {
+                name: 'information-fill.svg',
+                file_path: '/LockRoom (2.0)/LockRoom (1)/LockRoom/UX',
+                mime_type: 'image/svg+xml',
+                size: 519
+            },
+            {
+                name: 'powerpoint-2.svg',
+                file_path: '/LockRoom (2.0)/UX',
+                mime_type: 'image/svg+xml',
+                size: 3820
+            }
+        ];
+        const folderIdToPathMap = new Map();
+        const fileIdToPathMap = new Map();
+        const data_to_return = [];
+        const parent_folder = await this.foldersRepository.findOne({
             where: {
-                organization: { id: organizationId },
                 id: parent_folder_id,
             },
-            relations: ['sub_folders', 'files.organization'],
-        })));
-        const folder_file_structure = await this.buildFolderFileStructure(home_folder);
-        folder_file_structure.children = [
-            ...folder_file_structure.children,
-            ...result,
-        ].sort((a, b) => a.index - b.index);
-        return folder_file_structure;
+        });
+        for (let index = 0; index < files_data.length; index++) {
+            const file = files_data[index];
+            const path = files_data[index].file_path;
+            const find_folder = await this.foldersRepository.findOne({
+                where: { absolute_path: parent_folder.absolute_path + path },
+            });
+            const file_name_parts = file.name.split('.');
+            const file_extension = file_name_parts.length > 1 ? file_name_parts.pop() : '';
+            if (find_folder) {
+                console.log('folder found');
+                folderIdToPathMap.set(find_folder.id, path);
+                const add_file_data = await this.addFileToAFolder(file.name, find_folder.id, user_id, organization_id, file.mime_type, file.size, file_extension, 'placeholder');
+                if (add_file_data) {
+                    fileIdToPathMap.set(add_file_data.saved_file.id, file.file_path);
+                    data_to_return.push({
+                        id: add_file_data.saved_file.id,
+                        file_path: path,
+                    });
+                }
+            }
+            else {
+                console.log('folder not found', 'parent', parent_folder.name, path);
+                const new_folder_id = await this.ensureFolderPathExists(path, parent_folder.id, user_id, organization_id);
+                console.log(new_folder_id, 'id');
+                folderIdToPathMap.set(new_folder_id, file.file_path);
+                const add_file_data = await this.addFileToAFolder(file.name, new_folder_id, user_id, organization_id, file.mime_type, file.size, file_extension, 'placeholder');
+                if (add_file_data) {
+                    fileIdToPathMap.set(add_file_data.saved_file.id, file.file_path);
+                    data_to_return.push({
+                        id: add_file_data.saved_file.id,
+                        file_path: path,
+                    });
+                }
+            }
+        }
+        return data_to_return;
+    }
+    async dragAndDropFilesOneLevel(organization_id, parent_folder_id, folder_name, user_id, files) {
+        const file_data = [];
+        const find_folder = await this.foldersRepository.findOne({
+            where: {
+                parent_folder_id,
+                name: folder_name,
+            },
+        });
+        if (find_folder) {
+            for (let index = 0; index < files.length; index++) {
+                const file = files[index];
+                const file_name_parts = files[index].name.split('.');
+                const file_extension = file_name_parts.length > 1 ? file_name_parts.pop() : '';
+                const create_file = await this.addFileToAFolder(file.name, find_folder.id, user_id, organization_id, file.mime_type, file.size, file_extension, 'placeholder');
+                file_data.push({
+                    id: create_file.saved_file.id,
+                    name: create_file.saved_file.name,
+                });
+            }
+            return file_data;
+        }
+        else {
+            const create_folder = await this.folderService.create(folder_name, user_id, organization_id, parent_folder_id);
+            for (let index = 0; index < files.length; index++) {
+                const file = files[index];
+                const file_name_parts = files[index].name.split('.');
+                const file_extension = file_name_parts.length > 1 ? file_name_parts.pop() : '';
+                const create_file = await this.addFileToAFolder(file.name, create_folder.new_folder.id, user_id, organization_id, file.mime_type, file.size, file_extension, 'placeholder');
+                file_data.push({
+                    id: create_file.saved_file.id,
+                    name: create_file.saved_file.name,
+                });
+            }
+            return file_data;
+        }
+    }
+    async generatePaths(path) {
+        const parts = path.split('/').filter((part) => part !== '');
+        const paths = [];
+        let currentPath = '';
+        for (const part of parts) {
+            currentPath += `/${part}`;
+            paths.push({ absolute: currentPath, current: part });
+        }
+        return paths;
+    }
+    async ensureFolderPathExists(filePath, parent_folder_id, user_id, organization_id) {
+        const folderNames = filePath
+            .split('/')
+            .filter((folder) => folder.trim() !== '');
+        let currentFolderId = parent_folder_id;
+        console.log('path--------here');
+        for (const folderName of folderNames) {
+            console.log(folderName, 'name');
+            const folder = await this.foldersRepository.findOne({
+                where: { name: folderName, parent_folder_id: currentFolderId },
+            });
+            if (!folder) {
+                console.log('nested not found', folderName);
+                const create_folder = await this.folderService.create(folderName, user_id, organization_id, currentFolderId);
+                console.log('CREATED FOLDER', create_folder.new_folder.name, create_folder.parent_folder.name);
+                currentFolderId = create_folder.new_folder.id;
+            }
+            else {
+                currentFolderId = folder.id;
+                console.log('nested found', folderName);
+            }
+        }
+        return currentFolderId;
+    }
+    async updateFileNameAndBucketUrlDragAndDrop(file_id, file_uploaded_name) {
+        try {
+            const find_file = await this.fileRepository.findOne({
+                where: {
+                    id: file_id,
+                },
+            });
+            find_file.file_uploaded_name = file_uploaded_name;
+            find_file.bucket_url =
+                'https://lockroom.s3.amazonaws.com/' + file_uploaded_name;
+            return await this.fileRepository.save(find_file);
+        }
+        catch (error) { }
     }
 };
 exports.FilesService = FilesService;
@@ -219,6 +395,7 @@ exports.FilesService = FilesService = __decorate([
         typeorm_2.Repository,
         typeorm_2.Repository,
         file_permissions_service_1.FilesPermissionsService,
+        folders_service_1.FoldersService,
         group_files_permissions_service_1.GroupFilesPermissionsService,
         organizations_service_1.OrganizationsService])
 ], FilesService);

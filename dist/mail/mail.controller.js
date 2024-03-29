@@ -17,48 +17,49 @@ const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
 const email_service_1 = require("../email/email.service");
 const groups_service_1 = require("../groups/groups.service");
+const auth_guard_1 = require("../guards/auth.guard");
 const invites_service_1 = require("../invites/invites.service");
-const organizations_service_1 = require("../organizations/organizations.service");
 const users_service_1 = require("../users/users.service");
 const email_templates_1 = require("../utils/email.templates");
 let MailController = class MailController {
-    constructor(emailService, inviteService, userService, groupService, orgService, jwtService) {
+    constructor(emailService, inviteService, userService, groupService, jwtService) {
         this.emailService = emailService;
         this.inviteService = inviteService;
         this.userService = userService;
         this.groupService = groupService;
-        this.orgService = orgService;
         this.jwtService = jwtService;
     }
-    async sendEmail(emails, sender_id, group_id, organization_id) {
+    async sendEmail(emails, group_id, organization_id, request) {
         try {
-            console.log('SEND INVITES TO', emails, 'BY', sender_id);
-            if (!sender_id)
+            console.log('SEND INVITES TO', emails, 'BY', request.decoded_data.user_id);
+            if (!request.decoded_data.user_id)
                 throw new common_1.UnauthorizedException('Sender Id is Missing');
             let new_users = [];
-            const senderUser = await this.userService.findOne({ id: sender_id });
-            emails.map(async (email) => {
+            const senderUser = await this.userService.findOne({
+                id: request.decoded_data.user_id,
+            });
+            await Promise.all(emails.map(async (email) => {
                 const invitedUserAlreadyExists = await this.userService.findOne({
                     email,
                 });
                 if (invitedUserAlreadyExists) {
+                    console.log('invited user exists', invitedUserAlreadyExists);
                     if (invitedUserAlreadyExists.role == 'admin')
                         return;
-                    if (invitedUserAlreadyExists?.organization_created?.id == organization_id)
+                    if (invitedUserAlreadyExists?.organization_created?.id ==
+                        organization_id)
                         return;
-                    console.log('in user already exists');
                     return await this.groupService.addUserToAGroup(group_id, invitedUserAlreadyExists.id, senderUser.first_name + ' ' + senderUser.last_name);
                 }
                 new_users.push(email);
-            });
-            const { invites } = await this.inviteService.sendInvitesBySenderId(sender_id, new_users, group_id, organization_id);
+            }));
+            const { invites } = await this.inviteService.sendInvitesBySenderId(request.decoded_data.user_id, new_users, group_id, organization_id);
             if (invites.length > 0) {
                 const sendEmails = invites.map((invite) => {
                     const payload = { invite_id: invite.id };
                     const access_token = this.jwtService.sign(payload, {
-                        secret: process.env.JWT_INVITE_SECRET,
+                        secret: process.env.JWT_SECRET,
                     });
-                    console.log(access_token, "access_token");
                     const link = `${process.env.FE_HOST}/authentication/signup?confirm=${access_token}`;
                     const mail = {
                         to: invite.sent_to,
@@ -73,7 +74,12 @@ let MailController = class MailController {
                 const result = await Promise.all(sendEmails);
                 const group_users = await this.groupService.findAllUsersInGroup(group_id);
                 if (result.length > 0) {
-                    return { data: result, message: 'Emails Sent Successfully', invites, group_users };
+                    return {
+                        data: result,
+                        message: 'Emails Sent Successfully',
+                        invites,
+                        group_users,
+                    };
                 }
             }
             if (new_users.length == 0) {
@@ -88,13 +94,14 @@ let MailController = class MailController {
 };
 exports.MailController = MailController;
 __decorate([
+    (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
     (0, common_1.Post)('send-invites'),
     __param(0, (0, common_1.Body)('emails')),
-    __param(1, (0, common_1.Body)('sender_id')),
-    __param(2, (0, common_1.Body)('group_id')),
-    __param(3, (0, common_1.Body)('organization_id')),
+    __param(1, (0, common_1.Body)('group_id')),
+    __param(2, (0, common_1.Body)('organization_id')),
+    __param(3, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Array, String, String, String]),
+    __metadata("design:paramtypes", [Array, String, String, Object]),
     __metadata("design:returntype", Promise)
 ], MailController.prototype, "sendEmail", null);
 exports.MailController = MailController = __decorate([
@@ -103,7 +110,6 @@ exports.MailController = MailController = __decorate([
         invites_service_1.InvitesService,
         users_service_1.UsersService,
         groups_service_1.GroupsService,
-        organizations_service_1.OrganizationsService,
         jwt_1.JwtService])
 ], MailController);
 //# sourceMappingURL=mail.controller.js.map

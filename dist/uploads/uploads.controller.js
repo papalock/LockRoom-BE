@@ -16,26 +16,41 @@ exports.UploadController = void 0;
 const common_1 = require("@nestjs/common");
 const platform_express_1 = require("@nestjs/platform-express");
 const uploads_service_1 = require("./uploads.service");
+const auth_guard_1 = require("../guards/auth.guard");
 let UploadController = class UploadController {
     constructor(uploadService) {
         this.uploadService = uploadService;
     }
-    async uploadFile(files, organization_id, user_id, folder_id) {
-        return await this.uploadService.uploadMultiple(files, folder_id, user_id, organization_id);
+    async uploadFile(files, organization_id, folder_id, request) {
+        return await this.uploadService.uploadMultiple(files, folder_id, request.decoded_data.user_id, organization_id);
+    }
+    async dragAndDrop(files, file_ids) {
+        return await this.uploadService.dragAndDrop(files, file_ids);
     }
 };
 exports.UploadController = UploadController;
 __decorate([
     (0, common_1.Post)(),
+    (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
     (0, common_1.UseInterceptors)((0, platform_express_1.AnyFilesInterceptor)()),
     __param(0, (0, common_1.UploadedFiles)()),
     __param(1, (0, common_1.Body)('organization_id')),
-    __param(2, (0, common_1.Body)('user_id')),
-    __param(3, (0, common_1.Body)('folder_id')),
+    __param(2, (0, common_1.Body)('folder_id')),
+    __param(3, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Array, String, String, String]),
+    __metadata("design:paramtypes", [Array, String, String, Object]),
     __metadata("design:returntype", Promise)
 ], UploadController.prototype, "uploadFile", null);
+__decorate([
+    (0, common_1.Post)('drag-and-drop'),
+    (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
+    (0, common_1.UseInterceptors)((0, platform_express_1.AnyFilesInterceptor)()),
+    __param(0, (0, common_1.UploadedFiles)()),
+    __param(1, (0, common_1.Body)('file_ids')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Array, Array]),
+    __metadata("design:returntype", Promise)
+], UploadController.prototype, "dragAndDrop", null);
 exports.UploadController = UploadController = __decorate([
     (0, common_1.Controller)('upload'),
     __metadata("design:paramtypes", [uploads_service_1.UploadService])

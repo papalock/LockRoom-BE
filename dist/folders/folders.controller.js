@@ -15,87 +15,62 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.FoldersController = void 0;
 const common_1 = require("@nestjs/common");
 const folders_service_1 = require("./folders.service");
-const update_repository_dto_1 = require("./dto/update-repository.dto");
+const auth_guard_1 = require("../guards/auth.guard");
 let FoldersController = class FoldersController {
     constructor(foldersService) {
         this.foldersService = foldersService;
     }
-    create(name, user_id, parent_folder_id, organization_id) {
+    create(name, parent_folder_id, organization_id, request) {
         try {
-            return this.foldersService.create(name, user_id, organization_id, parent_folder_id);
+            return this.foldersService.create(name, request.decoded_data.user_id, organization_id, parent_folder_id);
         }
         catch (error) {
             console.log(error);
         }
     }
-    findAll() {
-        return this.foldersService.findAll();
+    findAllByOrganization(organization_id, request) {
+        return this.foldersService.findAllByOrganization(organization_id, request.decoded_data.user_id);
     }
-    findAllByOrganization(organization_id, user_id) {
-        return this.foldersService.findAllByOrganization(organization_id, user_id);
+    rename(folder_id, new_name, parent_folder_id) {
+        return this.foldersService.rename(folder_id, new_name, parent_folder_id);
     }
-    findAllByUserId(id) {
-        return this.foldersService.findAllByUserId(id);
-    }
-    findOne(id) {
-        return this.foldersService.findOne(+id);
-    }
-    update(id, updateRepositoryDto) {
-    }
-    remove(id) {
-        return this.foldersService.remove(id);
+    remove(folder_id) {
+        return this.foldersService.soft_delete(folder_id);
     }
 };
 exports.FoldersController = FoldersController;
 __decorate([
+    (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
     (0, common_1.Post)('/create'),
     __param(0, (0, common_1.Body)('name')),
-    __param(1, (0, common_1.Body)('user_id')),
-    __param(2, (0, common_1.Body)('parent_folder_id')),
-    __param(3, (0, common_1.Body)('organization_id')),
+    __param(1, (0, common_1.Body)('parent_folder_id')),
+    __param(2, (0, common_1.Body)('organization_id')),
+    __param(3, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String, String]),
+    __metadata("design:paramtypes", [String, String, String, Object]),
     __metadata("design:returntype", void 0)
 ], FoldersController.prototype, "create", null);
 __decorate([
-    (0, common_1.Get)(),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
-], FoldersController.prototype, "findAll", null);
-__decorate([
+    (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
     (0, common_1.Post)('/organization'),
     __param(0, (0, common_1.Body)('organization_id')),
-    __param(1, (0, common_1.Body)('user_id')),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], FoldersController.prototype, "findAllByOrganization", null);
 __decorate([
-    (0, common_1.Get)(':id'),
-    __param(0, (0, common_1.Param)('id')),
+    (0, common_1.Post)('rename'),
+    __param(0, (0, common_1.Body)('folder_id')),
+    __param(1, (0, common_1.Body)('new_name')),
+    __param(2, (0, common_1.Body)('parent_folder_id')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, String, String]),
     __metadata("design:returntype", void 0)
-], FoldersController.prototype, "findAllByUserId", null);
+], FoldersController.prototype, "rename", null);
 __decorate([
-    (0, common_1.Get)(':id'),
-    __param(0, (0, common_1.Param)('id')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
-], FoldersController.prototype, "findOne", null);
-__decorate([
-    (0, common_1.Patch)(':id'),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, update_repository_dto_1.UpdateRepositoryDto]),
-    __metadata("design:returntype", void 0)
-], FoldersController.prototype, "update", null);
-__decorate([
-    (0, common_1.Delete)(':id'),
-    __param(0, (0, common_1.Param)('id')),
+    (0, common_1.Post)('delete'),
+    __param(0, (0, common_1.Body)('folder_id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)

@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.GroupFilesPermissionsController = void 0;
 const common_1 = require("@nestjs/common");
 const group_files_permissions_service_1 = require("./group-files-permissions.service");
+const auth_guard_1 = require("../guards/auth.guard");
 let GroupFilesPermissionsController = class GroupFilesPermissionsController {
     constructor(grpupFilesPermissionsService) {
         this.grpupFilesPermissionsService = grpupFilesPermissionsService;
@@ -30,6 +31,7 @@ let GroupFilesPermissionsController = class GroupFilesPermissionsController {
 };
 exports.GroupFilesPermissionsController = GroupFilesPermissionsController;
 __decorate([
+    (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
     (0, common_1.Post)('/update-permissions'),
     __param(0, (0, common_1.Body)('file_ids')),
     __param(1, (0, common_1.Body)('group_id')),

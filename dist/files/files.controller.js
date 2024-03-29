@@ -15,14 +15,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.FilesController = void 0;
 const common_1 = require("@nestjs/common");
 const files_service_1 = require("./files.service");
-const create_file_dto_1 = require("./dto/create-file.dto");
-const update_file_dto_1 = require("./dto/update-file.dto");
+const auth_guard_1 = require("../guards/auth.guard");
 let FilesController = class FilesController {
     constructor(filesService) {
         this.filesService = filesService;
-    }
-    create(createFileDto) {
-        return this.filesService.create(createFileDto);
     }
     findAll(organization_id, parent_folder_id) {
         return this.filesService.getAllFilesByOrg(organization_id, parent_folder_id);
@@ -30,22 +26,16 @@ let FilesController = class FilesController {
     findOne(id) {
         return this.filesService.findOne(id);
     }
-    update(id, updateFileDto) {
-        return this.filesService.update(+id, updateFileDto);
+    addDragAndDrop(organization_id, parent_folder_id, folder_name, files, request) {
+        return this.filesService.dragAndDropFilesOneLevel(organization_id, parent_folder_id, folder_name, request.decoded_data.user_id, files);
     }
-    remove(id) {
-        return this.filesService.remove(+id);
+    addDragAndDropTwo(organization_id, parent_folder_id, files, request) {
+        return this.filesService.dragAndDropFiles(organization_id, parent_folder_id, request.decoded_data.user_id, files);
     }
 };
 exports.FilesController = FilesController;
 __decorate([
-    (0, common_1.Post)(),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_file_dto_1.CreateFileDto]),
-    __metadata("design:returntype", void 0)
-], FilesController.prototype, "create", null);
-__decorate([
+    (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
     (0, common_1.Post)('organization/all'),
     __param(0, (0, common_1.Body)('organization_id')),
     __param(1, (0, common_1.Body)('parent_folder_id')),
@@ -54,6 +44,7 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], FilesController.prototype, "findAll", null);
 __decorate([
+    (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
@@ -61,20 +52,28 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], FilesController.prototype, "findOne", null);
 __decorate([
-    (0, common_1.Patch)(':id'),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Body)()),
+    (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
+    (0, common_1.Post)('drag-and-drop'),
+    __param(0, (0, common_1.Body)('organization_id')),
+    __param(1, (0, common_1.Body)('parent_folder_id')),
+    __param(2, (0, common_1.Body)('folder_name')),
+    __param(3, (0, common_1.Body)('files')),
+    __param(4, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, update_file_dto_1.UpdateFileDto]),
+    __metadata("design:paramtypes", [String, String, String, Array, Object]),
     __metadata("design:returntype", void 0)
-], FilesController.prototype, "update", null);
+], FilesController.prototype, "addDragAndDrop", null);
 __decorate([
-    (0, common_1.Delete)(':id'),
-    __param(0, (0, common_1.Param)('id')),
+    (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
+    (0, common_1.Post)('nested-drag-and-drop'),
+    __param(0, (0, common_1.Body)('organization_id')),
+    __param(1, (0, common_1.Body)('parent_folder_id')),
+    __param(2, (0, common_1.Body)('files')),
+    __param(3, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, String, Array, Object]),
     __metadata("design:returntype", void 0)
-], FilesController.prototype, "remove", null);
+], FilesController.prototype, "addDragAndDropTwo", null);
 exports.FilesController = FilesController = __decorate([
     (0, common_1.Controller)('files'),
     __metadata("design:paramtypes", [files_service_1.FilesService])

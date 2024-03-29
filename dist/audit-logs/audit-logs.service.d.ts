@@ -16,6 +16,4 @@ export declare class AuditLogsSerivce {
     findAll(): Promise<AuditLogs[]>;
     findOne(id: string): Promise<AuditLogs>;
     exportDataToExcel(organization_id: string): Promise<void>;
-    update(id: number): string;
-    remove(id: number): string;
 }

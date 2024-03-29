@@ -34,9 +34,6 @@ let InvitesService = class InvitesService {
         this.jwtService = jwtService;
         this.groupService = groupService;
     }
-    create(createInviteDto) {
-        return 'This action adds a new invite';
-    }
     async findAll() {
         await this.inviteRepository.find();
     }
@@ -44,10 +41,16 @@ let InvitesService = class InvitesService {
         return this.inviteRepository
             .createQueryBuilder('invite')
             .leftJoinAndSelect('invite.sender', 'sender')
-            .where('sender.id = :userId', { userId: sender_id })
+            .where('sender.id = :user_id', { user_id: sender_id })
             .getMany();
     }
     async sendInvitesBySenderId(sender_id, emails, group_id, organization_id) {
+        if (!sender_id ||
+            emails.length == 0 ||
+            !group_id ||
+            !organization_id ||
+            !emails)
+            throw new common_1.NotFoundException('Missing Fields');
         const findUser = await this.userRepository.findOne({
             where: {
                 id: sender_id,
@@ -99,10 +102,18 @@ let InvitesService = class InvitesService {
         }
         catch (error) {
             console.log(error);
+            throw Error(error);
         }
     }
     async addInvitedUser(email, password, first_name, last_name, phone_number, jwt_token) {
         try {
+            if (!email ||
+                !password ||
+                !first_name ||
+                !last_name ||
+                !phone_number ||
+                !jwt_token)
+                throw new common_1.NotFoundException('Missing Fields');
             const find_user = await this.userRepository.findOne({
                 relations: ['organizations_added_in'],
                 where: {
@@ -116,7 +127,7 @@ let InvitesService = class InvitesService {
             password = hashedPassword;
             const full_name = `${first_name} ${last_name}`;
             const resp = await this.jwtService.verify(jwt_token, {
-                secret: process.env.JWT_INVITE_SECRET,
+                secret: process.env.JWT_SECRET,
             });
             const invite = await this.inviteRepository.findOne({
                 relations: ['organization', 'group'],
@@ -151,8 +162,7 @@ let InvitesService = class InvitesService {
                 groups: [find_group],
             });
             await this.groupRepository.save(find_group);
-            const saved_user = await this.userRepository.save(new_user);
-            console.log('saved users', saved_user);
+            await this.userRepository.save(new_user);
             return {
                 status: true,
             };
@@ -176,10 +186,8 @@ let InvitesService = class InvitesService {
                     where: { email },
                 });
                 if (invitedUserAlreadyExists) {
-                    console.log('in user already exists');
                     return await this.groupService.addUserToAGroup(group_id, invitedUserAlreadyExists.id, senderUser.first_name + ' ' + senderUser.last_name);
                 }
-                console.log('out user already exists');
                 new_users.push(email);
             });
             const { invites } = await this.sendInvitesBySenderId(sender_id, new_users, group_id, organization_id);
@@ -187,7 +195,7 @@ let InvitesService = class InvitesService {
                 const sendEmails = invites.map(async (invite) => {
                     const payload = { invite_id: invite.id };
                     const access_token = this.jwtService.sign(payload, {
-                        secret: process.env.JWT_INVITE_SECRET,
+                        secret: process.env.JWT_SECRET,
                     });
                     const link = `${process.env.FE_HOST}/authentication/signup?confirm=${access_token}`;
                     const mail = {
@@ -218,6 +226,7 @@ let InvitesService = class InvitesService {
         }
         catch (error) {
             console.log(error);
+            throw Error(error);
         }
     }
 };

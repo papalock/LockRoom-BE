@@ -19,6 +19,7 @@ const files_permissions_entity_1 = require("../files-permissions/entities/files-
 const file_entity_1 = require("../files/entities/file.entity");
 const organization_entity_1 = require("../organizations/entities/organization.entity");
 const group_entity_1 = require("../groups/entities/group.entity");
+const jwt_1 = require("@nestjs/jwt");
 let FoldersModule = class FoldersModule {
 };
 exports.FoldersModule = FoldersModule;
@@ -37,7 +38,7 @@ exports.FoldersModule = FoldersModule = __decorate([
             users_module_1.UsersModule,
         ],
         controllers: [folders_controller_1.FoldersController],
-        providers: [folders_service_1.FoldersService],
+        providers: [folders_service_1.FoldersService, jwt_1.JwtService],
         exports: [folders_service_1.FoldersService],
     })
 ], FoldersModule);

@@ -1,7 +1,6 @@
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtService } from '@nestjs/jwt';
 import { Folder } from 'src/folders/entities/folder.entity';
 import { Group } from 'src/groups/entities/group.entity';
@@ -73,6 +72,7 @@ export declare class UsersService {
             tree_index: string;
             users: User[];
             organization: Organization;
+            absolute_path: string;
         } & Folder)[];
         files_count: number;
         id: string;
@@ -106,17 +106,15 @@ export declare class UsersService {
         organizations: Organization[];
         is_phone_number_verified?: undefined;
     }>;
-    verifyEmail(jwt_token: string): Promise<User>;
-    getUserByToken(jwt_token: string): Promise<{
+    verifyEmail(user_id: string): Promise<User>;
+    getUserByToken(user_id: string): Promise<{
         findUser: User;
         organizations: any[];
     }>;
-    findAll(): Promise<User[]>;
     findOne(where: any): Promise<User>;
     getAllGroups(user_id: string): Promise<Group[]>;
-    update(id: number, updateUserDto: UpdateUserDto): string;
-    remove(id: number): string;
-    clearDB(): Promise<void>;
-    removeAllRecords(): Promise<void>;
-    truncateUserTable(): Promise<void>;
+    findAll(): Promise<User[]>;
+    truncateUserTable(): Promise<{
+        success: boolean;
+    }>;
 }

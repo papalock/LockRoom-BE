@@ -30,38 +30,47 @@ let AuditLogsSerivce = class AuditLogsSerivce {
         this.userRepository = userRepository;
     }
     async create(file_id, user_id, organization_id, type) {
-        const find_user = await this.userRepository.findOne({
-            relations: ['groups', 'createdGroups'],
-            where: {
-                id: user_id,
-            },
-        });
-        const find_file = file_id
-            ? await this.fileRepository.findOne({
+        try {
+            if (!user_id || !organization_id || !type)
+                throw new common_1.NotFoundException('Missing Fields');
+            const find_user = await this.userRepository.findOne({
+                relations: ['groups', 'createdGroups'],
                 where: {
-                    id: file_id,
+                    id: user_id,
                 },
-            })
-            : null;
-        const find_org = await this.orgRepository.findOne({
-            where: {
-                id: organization_id,
-            },
-        });
-        const groups = [...find_user.groups, ...find_user.createdGroups];
-        const audit_logs = groups.map((item) => {
-            return this.auditLogsRepository.create({
-                file: file_id ? find_file : null,
-                organization: find_org,
-                user: find_user,
-                group: item,
-                type,
             });
-        });
-        return await this.auditLogsRepository.save(audit_logs);
+            const find_file = file_id
+                ? await this.fileRepository.findOne({
+                    where: {
+                        id: file_id,
+                    },
+                })
+                : null;
+            const find_org = await this.orgRepository.findOne({
+                where: {
+                    id: organization_id,
+                },
+            });
+            const groups = [...find_user.groups, ...find_user.createdGroups];
+            const audit_logs = groups.map((item) => {
+                return this.auditLogsRepository.create({
+                    file: file_id ? find_file : null,
+                    organization: find_org,
+                    user: find_user,
+                    group: item,
+                    type,
+                });
+            });
+            return await this.auditLogsRepository.save(audit_logs);
+        }
+        catch (error) {
+            throw new Error(error);
+        }
     }
     async getStats(organization_id, date) {
         try {
+            if (!organization_id || !date)
+                throw new common_1.NotFoundException('Missing Fields');
             let startDate;
             if (date.type == 'days') {
                 startDate = (0, date_fns_1.subDays)(new Date(), date.value);
@@ -160,6 +169,7 @@ let AuditLogsSerivce = class AuditLogsSerivce {
         }
         catch (error) {
             console.log(error);
+            throw Error(error);
         }
     }
     async findAll() {
@@ -169,6 +179,8 @@ let AuditLogsSerivce = class AuditLogsSerivce {
     }
     async findOne(id) {
         try {
+            if (!id)
+                throw new common_1.NotFoundException('Missing Fields');
             return await this.auditLogsRepository.findOne({
                 where: {
                     id,
@@ -176,9 +188,13 @@ let AuditLogsSerivce = class AuditLogsSerivce {
                 relations: ['users'],
             });
         }
-        catch (error) { }
+        catch (error) {
+            throw Error(error);
+        }
     }
     async exportDataToExcel(organization_id) {
+        if (!organization_id)
+            throw new common_1.NotFoundException('Missing Fields');
         const audit_logs = await this.auditLogsRepository.find({
             relations: ['user'],
             where: {
@@ -194,12 +210,6 @@ let AuditLogsSerivce = class AuditLogsSerivce {
             };
         });
         console.log(await (0, excel_utils_1.createExcelWorkbook)(data));
-    }
-    update(id) {
-        return `This action updates a #${id} group`;
-    }
-    remove(id) {
-        return `This action removes a #${id} group`;
     }
 };
 exports.AuditLogsSerivce = AuditLogsSerivce;

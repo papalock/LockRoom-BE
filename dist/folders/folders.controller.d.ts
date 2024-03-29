@@ -1,9 +1,8 @@
 import { FoldersService } from './folders.service';
-import { UpdateRepositoryDto } from './dto/update-repository.dto';
 export declare class FoldersController {
     private readonly foldersService;
     constructor(foldersService: FoldersService);
-    create(name: string, user_id: string, parent_folder_id: string, organization_id: string): Promise<{
+    create(name: string, parent_folder_id: string, organization_id: string, request: any): Promise<{
         new_folder: {
             folder_name: string;
             folder_parent_folder_id: string;
@@ -15,6 +14,7 @@ export declare class FoldersController {
             tree_index: string;
             users: import("../users/entities/user.entity").User[];
             organization: import("../organizations/entities/organization.entity").Organization;
+            absolute_path: string;
             id: string;
             parentFolder: import("./entities/folder.entity").Folder;
             is_deleted: boolean;
@@ -26,12 +26,9 @@ export declare class FoldersController {
         files_count: number;
         parent_folder: import("./entities/folder.entity").Folder;
     }>;
-    findAll(): Promise<void>;
-    findAllByOrganization(organization_id: string, user_id: string): Promise<{
+    findAllByOrganization(organization_id: string, request: any): Promise<{
         sub_folder_count: any[];
     }>;
-    findAllByUserId(id: string): Promise<void>;
-    findOne(id: string): string;
-    update(id: string, updateRepositoryDto: UpdateRepositoryDto): void;
-    remove(id: string): Promise<import("typeorm").UpdateResult>;
+    rename(folder_id: string, new_name: string, parent_folder_id: string): Promise<import("@nestjs/common").ConflictException | import("typeorm").UpdateResult>;
+    remove(folder_id: string): Promise<import("typeorm").UpdateResult>;
 }

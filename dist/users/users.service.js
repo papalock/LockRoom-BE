@@ -26,7 +26,6 @@ const email_templates_1 = require("../utils/email.templates");
 const jwt_utils_1 = require("../utils/jwt.utils");
 const invite_entity_1 = require("../invites/entities/invite.entity");
 const organization_entity_1 = require("../organizations/entities/organization.entity");
-const typeorm_4 = require("typeorm");
 const audit_logs_service_1 = require("../audit-logs/audit-logs.service");
 let UsersService = class UsersService {
     constructor(userRepository, jwtService, auditService, folderRepository, groupsRepository, orgRepository, inviteRepository) {
@@ -90,6 +89,7 @@ let UsersService = class UsersService {
                 tree_index: '1',
                 users: [user],
                 organization: saveOrg,
+                absolute_path: '/Home'
             });
             const mail = {
                 to: user.email,
@@ -173,7 +173,6 @@ let UsersService = class UsersService {
                 user.organizations_added_in.map((org) => {
                     orgs.push(org.id);
                 });
-                console.log(orgs, 'useree');
                 const organizations = await this.orgRepository.find({
                     relations: ['users', 'creator'],
                     where: {
@@ -181,7 +180,6 @@ let UsersService = class UsersService {
                     },
                 });
                 const new_audit = await this.auditService.create(null, user.id, user.organizations_added_in[0].id, 'login');
-                console.log(new_audit);
                 return {
                     access_token: accessToken,
                     is_phone_number_verified: user.phone_number ? true : false,
@@ -201,16 +199,16 @@ let UsersService = class UsersService {
             const user = (0, jwt_utils_1.decodeJwtResponse)(jwt_token);
             if (!user)
                 throw new common_1.UnauthorizedException('token invalid');
-            const findUser = await this.userRepository.findOne({
+            const find_user = await this.userRepository.findOne({
                 relations: ['organizations_added_in', 'organization_created'],
                 where: {
                     email: user.email,
                 },
             });
-            if (findUser) {
+            if (find_user) {
                 const orgs = [];
-                orgs.push(findUser?.organization_created?.id);
-                findUser.organizations_added_in.map((org) => {
+                orgs.push(find_user?.organization_created?.id);
+                find_user.organizations_added_in.map((org) => {
                     orgs.push(org.id);
                 });
                 const organizations = await this.orgRepository.find({
@@ -222,21 +220,21 @@ let UsersService = class UsersService {
                 const query = await this.folderRepository
                     .createQueryBuilder('folder')
                     .leftJoinAndSelect('folder.users', 'user')
-                    .where('user.id = :userId', { userId: findUser.id })
+                    .where('user.id = :user_id', { user_id: find_user.id })
                     .getMany();
                 const query1 = await this.folderRepository
                     .createQueryBuilder('folder')
                     .leftJoinAndSelect('folder.users', 'user')
                     .leftJoin('folder.sub_folders', 'sub_folder')
                     .addSelect('COUNT(DISTINCT sub_folder.id)', 'sub_folder_count')
-                    .where('user.id = :userId', { userId: findUser.id })
+                    .where('user.id = :user_id', { user_id: find_user.id })
                     .groupBy('folder.id, user.id')
                     .orderBy('folder.createdAt', 'ASC')
                     .getRawMany();
                 const payload = {
-                    user_id: findUser.id,
-                    email: findUser.email,
-                    role: findUser.role,
+                    user_id: find_user.id,
+                    email: find_user.email,
+                    role: find_user.role,
                 };
                 const accessToken = this.jwtService.sign(payload, {
                     secret: process.env.JWT_SECRET,
@@ -244,12 +242,12 @@ let UsersService = class UsersService {
                 });
                 return {
                     access_token: accessToken,
-                    is_phone_number_verified: findUser.phone_number ? true : false,
+                    is_phone_number_verified: find_user.phone_number ? true : false,
                     folders: query,
                     files_count: query.length,
                     sub_folder_count: query1,
-                    id: findUser.id,
-                    user: findUser,
+                    id: find_user.id,
+                    user: find_user,
                     organizations,
                 };
             }
@@ -275,7 +273,7 @@ let UsersService = class UsersService {
                 .leftJoinAndSelect('folder.users', 'user')
                 .leftJoin('folder.sub_folders', 'sub_folder')
                 .addSelect('COUNT(DISTINCT sub_folder.id)', 'sub_folder_count')
-                .where('user.id = :userId', { userId: new_user.id })
+                .where('user.id = :user_id', { user_id: new_user.id })
                 .groupBy('folder.id, user.id')
                 .orderBy('folder.createdAt', 'ASC')
                 .getRawMany();
@@ -303,6 +301,7 @@ let UsersService = class UsersService {
                 tree_index: '1',
                 users: [new_user],
                 organization: saveOrg,
+                absolute_path: '/Home'
             });
             return {
                 access_token,
@@ -319,61 +318,46 @@ let UsersService = class UsersService {
             throw new common_1.InternalServerErrorException(error.message || 'failed to create user');
         }
     }
-    async verifyEmail(jwt_token) {
+    async verifyEmail(user_id) {
         try {
-            const resp = await this.jwtService.verify(jwt_token, {
-                secret: process.env.JWT_VERIFY_SECRET,
-            });
-            if (resp) {
-                const findUser = await this.userRepository.findOne({
+            if (user_id) {
+                const find_user = await this.userRepository.findOne({
                     where: {
-                        id: resp.user_id,
+                        id: user_id,
                     },
                 });
-                if (!findUser)
+                if (!find_user)
                     throw new common_1.NotFoundException('user not found');
-                findUser.is_email_verified = true;
-                return await this.userRepository.save(findUser);
+                find_user.is_email_verified = true;
+                return await this.userRepository.save(find_user);
             }
         }
         catch (error) { }
     }
-    async getUserByToken(jwt_token) {
+    async getUserByToken(user_id) {
         try {
-            const resp = await this.jwtService.verify(jwt_token, {
-                secret: process.env.JWT_SECRET,
+            if (!user_id)
+                throw new common_1.NotFoundException('Missing Fields');
+            const find_user = await this.userRepository.findOne({
+                relations: ['organizations_added_in', 'organization_created'],
+                where: {
+                    id: user_id,
+                },
             });
-            if (resp) {
-                const find_user = await this.userRepository.findOne({
-                    relations: ['organizations_added_in', 'organization_created'],
-                    where: {
-                        id: resp.user_id,
-                    },
-                });
-                if (!find_user) {
-                    throw new common_1.NotFoundException('user not found');
-                }
-                const orgs = [];
-                if (find_user.role == 'admin')
-                    orgs.push(find_user.organization_created);
-                find_user.organizations_added_in.map((org) => {
-                    orgs.push(org);
-                });
-                return { findUser: find_user, organizations: orgs };
+            if (!find_user) {
+                throw new common_1.NotFoundException('user not found');
             }
-            throw new common_1.UnauthorizedException('jwt token expired');
+            const orgs = [];
+            if (find_user.role == 'admin')
+                orgs.push(find_user.organization_created);
+            find_user.organizations_added_in.map((org) => {
+                orgs.push(org);
+            });
+            return { findUser: find_user, organizations: orgs };
         }
         catch (error) {
             console.log(error, 'err');
             throw error;
-        }
-    }
-    findAll() {
-        try {
-            return this.userRepository.find();
-        }
-        catch (error) {
-            throw new common_1.InternalServerErrorException('Failed to fetch users');
         }
     }
     async findOne(where) {
@@ -384,67 +368,38 @@ let UsersService = class UsersService {
     }
     async getAllGroups(user_id) {
         try {
-            const findUser = await this.userRepository.findOne({
+            if (!user_id)
+                throw new common_1.NotFoundException("Missing Fields");
+            const find_user = await this.userRepository.findOne({
                 relations: ['groups'],
                 where: {
                     id: user_id,
                 },
             });
-            if (!findUser)
+            if (!find_user)
                 throw new common_1.NotFoundException({
                     status: 404,
                     message: 'user not found',
                 });
-            if (findUser.role == 'admin') {
+            if (find_user.role == 'admin') {
                 return await this.groupsRepository.find({
                     where: { createdBy: { id: user_id } },
                 });
             }
-            return findUser.groups;
+            return find_user.groups;
         }
         catch (error) {
             console.log(error, 'in err lol');
+            throw Error(error);
         }
     }
-    update(id, updateUserDto) {
-        return `This action updates a #${id} user`;
-    }
-    remove(id) {
-        return `This action removes a #${id} user`;
-    }
-    async clearDB() {
+    async findAll() {
         try {
-            const remove = await this.userRepository.clear();
-            console.log(remove, 'in rmeoooood');
-            return remove;
+            return await this.userRepository.find();
         }
         catch (error) {
-            console.log(error);
+            throw new common_1.InternalServerErrorException('Failed to fetch users');
         }
-    }
-    async removeAllRecords() {
-        console.log('here');
-        const entityManager = new typeorm_3.DataSource({
-            type: 'postgres',
-            host: process.env.DB_HOST,
-            port: parseInt(process.env.DB_PORT, 10),
-            username: process.env.DB_USERNAME,
-            password: process.env.DB_PASSWORD,
-            database: process.env.DB_DATABASE,
-        }).manager;
-        const entityMetadatas = (0, typeorm_4.getMetadataArgsStorage)().tables.map((table) => table.target);
-        console.log('meta', entityMetadatas);
-        await entityManager.query('SET FOREIGN_KEY_CHECKS = 0');
-        for (const entityMetadata of entityMetadatas) {
-            try {
-                await entityManager.clear(entityMetadata);
-                console.log(`Table ${entityMetadata} cleared successfully.`);
-            }
-            catch (error) {
-                console.error(`Error clearing table ${entityMetadata}:`, error);
-            }
-        }
-        await entityManager.query('SET FOREIGN_KEY_CHECKS = 1');
     }
     async truncateUserTable() {
         const entityManager = new typeorm_3.DataSource({
@@ -458,9 +413,11 @@ let UsersService = class UsersService {
         try {
             await (await entityManager).manager.query('TRUNCATE TABLE "user" CASCADE');
             console.log('User table truncated successfully.');
+            return { success: true };
         }
         catch (error) {
             console.error('Error truncating user table:', error);
+            throw Error(error);
         }
     }
 };

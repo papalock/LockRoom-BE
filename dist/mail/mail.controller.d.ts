@@ -2,17 +2,15 @@ import { JwtService } from '@nestjs/jwt';
 import { EmailService } from 'src/email/email.service';
 import { GroupsService } from 'src/groups/groups.service';
 import { InvitesService } from 'src/invites/invites.service';
-import { OrganizationsService } from 'src/organizations/organizations.service';
 import { UsersService } from 'src/users/users.service';
 export declare class MailController {
     private readonly emailService;
     private readonly inviteService;
     private readonly userService;
     private readonly groupService;
-    private readonly orgService;
     private readonly jwtService;
-    constructor(emailService: EmailService, inviteService: InvitesService, userService: UsersService, groupService: GroupsService, orgService: OrganizationsService, jwtService: JwtService);
-    sendEmail(emails: string[], sender_id: string, group_id: string, organization_id: string): Promise<{
+    constructor(emailService: EmailService, inviteService: InvitesService, userService: UsersService, groupService: GroupsService, jwtService: JwtService);
+    sendEmail(emails: string[], group_id: string, organization_id: string, request: any): Promise<{
         data: [import("@sendgrid/mail").ClientResponse, {}][];
         message: string;
         invites: ({

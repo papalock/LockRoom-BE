@@ -1,3 +1,4 @@
+import { ConflictException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { Folder } from './entities/folder.entity';
 import { UsersService } from '../users/users.service';
@@ -27,6 +28,7 @@ export declare class FoldersService {
             tree_index: string;
             users: import("../users/entities/user.entity").User[];
             organization: Organization;
+            absolute_path: string;
             id: string;
             parentFolder: Folder;
             is_deleted: boolean;
@@ -42,9 +44,8 @@ export declare class FoldersService {
     findAllByOrganization(organization_id: string, user_id: string): Promise<{
         sub_folder_count: any[];
     }>;
-    findAllByUserId(userId: string): Promise<void>;
-    findOne(id: number): string;
+    findAllByUserId(user_id: string): Promise<Folder[]>;
     update(prev_name: string, new_name: string, parent_folder_id?: string): Promise<void>;
-    remove(id: string): Promise<import("typeorm").UpdateResult>;
-    createFolderWithDefaultPermissions(name: string, sub: string, parent_folder_id?: string): Promise<void>;
+    soft_delete(id: string): Promise<import("typeorm").UpdateResult>;
+    rename(folder_id: string, new_name: string, parent_folder_id: string): Promise<ConflictException | import("typeorm").UpdateResult>;
 }

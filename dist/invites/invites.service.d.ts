@@ -13,7 +13,6 @@ export declare class InvitesService {
     private readonly jwtService;
     private readonly groupService;
     constructor(inviteRepository: Repository<Invite>, userRepository: Repository<User>, groupRepository: Repository<Group>, orgRepository: Repository<Organization>, jwtService: JwtService, groupService: GroupsService);
-    create(createInviteDto: any): string;
     findAll(): Promise<void>;
     findBySenderId(sender_id: string): Promise<Invite[]>;
     sendInvitesBySenderId(sender_id: string, emails: string[], group_id: string, organization_id: string): Promise<{

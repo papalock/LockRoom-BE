@@ -27,7 +27,7 @@ let AuthGuard = class AuthGuard {
             const resp = await this.jwtService.verify(authToken, {
                 secret: process.env.JWT_SECRET,
             });
-            request.decodedData = resp;
+            request.decoded_data = resp;
             return true;
         }
         catch (error) {

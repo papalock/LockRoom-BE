@@ -25,12 +25,12 @@ __decorate([
     __metadata("design:type", Number)
 ], GroupFilesPermissions.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => group_entity_1.Group, (group) => group.group_files_permissions),
+    (0, typeorm_1.ManyToOne)(() => group_entity_1.Group, (group) => group.group_files_permissions, { onDelete: 'CASCADE' }),
     (0, typeorm_1.JoinColumn)(),
     __metadata("design:type", group_entity_1.Group)
 ], GroupFilesPermissions.prototype, "group", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => files_permissions_entity_1.FilesPermissions, (filePermission) => filePermission.group_files_permissions),
+    (0, typeorm_1.ManyToOne)(() => files_permissions_entity_1.FilesPermissions, (filePermission) => filePermission.group_files_permissions, { onDelete: 'CASCADE' }),
     (0, typeorm_1.JoinColumn)(),
     __metadata("design:type", files_permissions_entity_1.FilesPermissions)
 ], GroupFilesPermissions.prototype, "file_permission", void 0);
